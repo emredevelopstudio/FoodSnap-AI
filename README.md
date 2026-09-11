@@ -1,4 +1,4 @@
-# nutritrack_ai
+# foodsnap-Ai
 
 A new Flutter project.
 
