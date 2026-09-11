@@ -11,6 +11,7 @@ import 'services/hive_service.dart';
 import 'services/purchase_service.dart';
 import 'services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'views/responsive_scaffold.dart';
 
 void main() async {
@@ -24,6 +25,8 @@ void main() async {
 
   // RevenueCat Service vor App-Start initialisieren
   await PurchaseService.init();
+
+  await dotenv.load(fileName: ".env");
 
   runApp(
     const ProviderScope(

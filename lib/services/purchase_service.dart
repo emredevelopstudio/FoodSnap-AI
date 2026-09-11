@@ -13,15 +13,18 @@ class PurchaseService {
   static const String _appleApiKey = 'HIER_APPLE_API_KEY_FALLS_VORHANDEN';
   static const String entitlementId = 'pro';
 
-  static const bool _isDevAdmin = false;
-  static bool? devOverrideIsPremium = false;
+  // Entwickler-Bypass: Im Debug-Modus Pro, im Release-Modus automatisch inaktiv
+  static const bool _isDevAdmin = true;
+  static bool? devOverrideIsPremium;
   static bool _cachedIsPremium = false;
 
   /// Gibt an, ob Pro aktiv ist (unter Berücksichtigung des Dev-Overrides)
   static bool get isPremium {
-    if (_isDevAdmin) return true;
-    if (kDebugMode && devOverrideIsPremium != null) {
-      return devOverrideIsPremium!;
+    if (kDebugMode) {
+      if (devOverrideIsPremium != null) {
+        return devOverrideIsPremium!;
+      }
+      if (_isDevAdmin) return true;
     }
     return _cachedIsPremium;
   }
@@ -54,8 +57,11 @@ class PurchaseService {
 
   /// Prüft, ob der Nutzer Pro-Status besitzt
   static Future<bool> isUserSubscribed([String id = entitlementId]) async {
-    if (kDebugMode && devOverrideIsPremium != null) {
-      return devOverrideIsPremium!;
+    if (kDebugMode) {
+      if (devOverrideIsPremium != null) {
+        return devOverrideIsPremium!;
+      }
+      if (_isDevAdmin) return true;
     }
 
     try {

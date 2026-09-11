@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
@@ -10,7 +11,7 @@ import '../models/meal_item.dart';
 typedef GeminiService = GeminiVisionService;
 
 class GeminiVisionService {
-  static const String defaultApiKey = 'AQ.Ab8RN6IayeGgVKKiGMXoRH2xiVhFt-2ByVx5YSDIZbPqgh0g0A';
+  static String get defaultApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
   static const String modelName = 'gemini-3.6-flash';
 
   final String apiKey;
