@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/ad_service.dart';
+import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
 
 class AppBannerAd extends ConsumerStatefulWidget {
@@ -14,16 +15,20 @@ class AppBannerAd extends ConsumerStatefulWidget {
 class _AppBannerAdState extends ConsumerState<AppBannerAd> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadBanner();
+    if (!PurchaseService.isProUser) {
+      _loadBanner();
+    }
   }
 
   void _loadBanner() {
-    final isPremium = ref.read(premiumProvider);
-    if (isPremium || _bannerAd != null) return;
+    final isPro = PurchaseService.isProUser || (mounted && ref.read(premiumProvider));
+    if (isPro || _bannerAd != null || _isLoading) return;
+    _isLoading = true;
 
     _bannerAd = BannerAd(
       adUnitId: AdService.bannerAdUnitId,
@@ -32,8 +37,15 @@ class _AppBannerAdState extends ConsumerState<AppBannerAd> {
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           debugPrint('>>> [AdMob] Banner loaded successfully!');
+          _isLoading = false;
           if (!mounted) {
             ad.dispose();
+            return;
+          }
+          if (PurchaseService.isProUser) {
+            ad.dispose();
+            _bannerAd = null;
+            _isLoaded = false;
             return;
           }
           setState(() {
@@ -42,6 +54,7 @@ class _AppBannerAdState extends ConsumerState<AppBannerAd> {
         },
         onAdFailedToLoad: (ad, error) {
           debugPrint('>>> [AdMob] Banner FAILED to load: code=${error.code}, message=${error.message}, domain=${error.domain}');
+          _isLoading = false;
           ad.dispose();
           if (mounted) {
             setState(() {
@@ -59,13 +72,8 @@ class _AppBannerAdState extends ConsumerState<AppBannerAd> {
   void _disposeAd() {
     _bannerAd?.dispose();
     _bannerAd = null;
-    if (_isLoaded && mounted) {
-      setState(() {
-        _isLoaded = false;
-      });
-    } else {
-      _isLoaded = false;
-    }
+    _isLoaded = false;
+    _isLoading = false;
   }
 
   @override
@@ -76,28 +84,47 @@ class _AppBannerAdState extends ConsumerState<AppBannerAd> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<bool>(premiumProvider, (previous, next) {
-      if (!next && _bannerAd == null) {
-        _loadBanner();
-      } else if (next && _bannerAd != null) {
-        _disposeAd();
-      }
-    });
+    return ValueListenableBuilder<bool>(
+      valueListenable: PurchaseService.proStatusNotifier,
+      builder: (context, proNotifier, _) {
+        final proRiverpod = ref.watch(premiumProvider);
+        final isPro = proNotifier ||
+            PurchaseService.proStatusNotifier.value ||
+            HiveService.getIsProUser() ||
+            proRiverpod ||
+            PurchaseService.isProUser;
 
-    final isPremium = ref.watch(premiumProvider);
-    if (isPremium || !_isLoaded || _bannerAd == null) {
-      return const SizedBox.shrink();
-    }
+        debugPrint('[AppBannerAd] Build aufgerufen - isPro: $isPro');
 
-    return SafeArea(
-      top: false,
-      child: Center(
-        child: SizedBox(
-          width: _bannerAd!.size.width.toDouble(),
-          height: _bannerAd!.size.height.toDouble(),
-          child: AdWidget(ad: _bannerAd!),
-        ),
-      ),
+        if (isPro) {
+          _disposeAd();
+          return const SizedBox.shrink();
+        }
+
+        // Falls Nutzer nicht Pro ist und noch kein Banner existiert: jetzt nachgeladen
+        if (_bannerAd == null && !_isLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !PurchaseService.isProUser && _bannerAd == null && !_isLoading) {
+              _loadBanner();
+            }
+          });
+        }
+
+        if (!_isLoaded || _bannerAd == null) {
+          return const SizedBox.shrink();
+        }
+
+        return SafeArea(
+          top: false,
+          child: Center(
+            child: SizedBox(
+              width: _bannerAd!.size.width.toDouble(),
+              height: _bannerAd!.size.height.toDouble(),
+              child: AdWidget(ad: _bannerAd!),
+            ),
+          ),
+        );
+      },
     );
   }
 }

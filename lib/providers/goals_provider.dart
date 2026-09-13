@@ -1,3 +1,4 @@
+import '../services/gemini_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/daily_goals.dart';
 import '../models/user_profile.dart';
@@ -6,7 +7,8 @@ import '../services/hive_service.dart';
 class DailyGoalsNotifier extends StateNotifier<DailyGoals> {
   DailyGoalsNotifier() : super(HiveService.getDailyGoals());
 
-  Future<void> updateGoals({double? targetCalories, double? targetProteinG}) async {
+  Future<void> updateGoals(
+      {double? targetCalories, double? targetProteinG}) async {
     final updated = state.copyWith(
       targetCalories: targetCalories,
       targetProteinG: targetProteinG,
@@ -16,7 +18,8 @@ class DailyGoalsNotifier extends StateNotifier<DailyGoals> {
   }
 }
 
-final dailyGoalsProvider = StateNotifierProvider<DailyGoalsNotifier, DailyGoals>((ref) {
+final dailyGoalsProvider =
+    StateNotifierProvider<DailyGoalsNotifier, DailyGoals>((ref) {
   return DailyGoalsNotifier();
 });
 
@@ -25,7 +28,8 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
 
   UserProfileNotifier(this.ref) : super(HiveService.getUserProfile());
 
-  Future<void> updateProfile(UserProfile profile, {bool applyToGoals = true}) async {
+  Future<void> updateProfile(UserProfile profile,
+      {bool applyToGoals = true}) async {
     state = profile;
     await HiveService.saveUserProfile(profile);
 
@@ -39,13 +43,11 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
   }
 }
 
-final userProfileProvider = StateNotifierProvider<UserProfileNotifier, UserProfile>((ref) {
+final userProfileProvider =
+    StateNotifierProvider<UserProfileNotifier, UserProfile>((ref) {
   return UserProfileNotifier(ref);
 });
 
 final geminiApiKeyProvider = StateProvider<String>((ref) {
-  return const String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: 'AQ.Ab8RN6IayeGgVKKiGMXoRH2xiVhFt-2ByVx5YSDIZbPqgh0g0A',
-  );
+  return GeminiVisionService.defaultApiKey;
 });

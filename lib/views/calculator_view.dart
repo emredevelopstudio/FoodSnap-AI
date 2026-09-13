@@ -470,8 +470,8 @@ class _CalculatorNativeAdState extends ConsumerState<_CalculatorNativeAd> {
   }
 
   void _loadAd() {
-    final isPremium = ref.read(premiumProvider);
-    if (isPremium) return;
+    final isPro = ref.read(premiumProvider) || PurchaseService.isProUser;
+    if (isPro) return;
     if (!Platform.isAndroid && !Platform.isIOS) return;
     if (_nativeAd != null) return;
 
@@ -563,8 +563,8 @@ class _CalculatorNativeAdState extends ConsumerState<_CalculatorNativeAd> {
       }
     });
 
-    final isPremium = ref.watch(premiumProvider);
-    if (isPremium || !_isLoaded || _nativeAd == null) {
+    final isPro = ref.watch(premiumProvider) || PurchaseService.isProUser;
+    if (isPro || !_isLoaded || _nativeAd == null) {
       return const SizedBox.shrink();
     }
 

@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="com.android.vending.BILLING"/>
 
     <application
@@ -8,10 +9,10 @@
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
 
-        <!-- AdMob App-ID (Aktuell offizielle Google-Test-ID, später durch deine echte AdMob-ID ersetzen) -->
+        <!-- AdMob App-ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-9627194765500923~3520949707"/>
 
         <activity
             android:name=".MainActivity"

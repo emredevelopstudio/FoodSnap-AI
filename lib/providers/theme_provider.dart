@@ -19,3 +19,9 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((r
   return ThemeModeNotifier();
 });
 
+/// Reaktiver Provider für Switch-Widgets: true = Nachtmodus aktiv
+final isDarkModeProvider = Provider<bool>((ref) {
+  final mode = ref.watch(themeModeProvider);
+  return mode == ThemeMode.dark;
+});
+

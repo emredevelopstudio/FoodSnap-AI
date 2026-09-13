@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
 
 class ProUpgradeSheet extends ConsumerStatefulWidget {
-  const ProUpgradeSheet({super.key});
+  final String? customMessage;
 
-  static Future<void> show(BuildContext context) {
+  const ProUpgradeSheet({super.key, this.customMessage});
+
+  static Future<void> show(BuildContext context, {String? customMessage}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => const ProUpgradeSheet(),
+      builder: (ctx) => ProUpgradeSheet(customMessage: customMessage),
     );
   }
 
@@ -21,37 +24,101 @@ class ProUpgradeSheet extends ConsumerStatefulWidget {
 
 class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
   bool _isLoading = false;
+  bool _hasHandledSuccess = false;
+
+  void _onPurchaseSuccess({String? message}) {
+    if (_hasHandledSuccess) return;
+    _hasHandledSuccess = true;
+    if (mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message ?? 'FoodSnap AI Pro erfolgreich aktiviert!'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    PurchaseService.proStatusNotifier.addListener(_onProNotifierChanged);
+  }
+
+  void _onProNotifierChanged() {
+    if (PurchaseService.proStatusNotifier.value || HiveService.getIsProUser()) {
+      _onPurchaseSuccess();
+    }
+  }
+
+  @override
+  void dispose() {
+    PurchaseService.proStatusNotifier.removeListener(_onProNotifierChanged);
+    super.dispose();
+  }
 
   Future<void> _handlePurchase() async {
+    debugPrint('>>> [DEBUG-KAUF] Upgrade-Button gedrückt!');
     setState(() => _isLoading = true);
     try {
+      bool success = false;
+      debugPrint('>>> [DEBUG-KAUF] Rufe Purchases.getOfferings() ab...');
       final offerings = await Purchases.getOfferings();
+      debugPrint('>>> [DEBUG-KAUF] Gefundene Offerings: ${offerings.all.keys}');
+
       final current = offerings.current;
-      if (current == null || current.availablePackages.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Keine Upgrade-Angebote verfügbar.'),
-            backgroundColor: Colors.orange,
-          ),
+      debugPrint('>>> [DEBUG-KAUF] Current Offering: ${current?.identifier}, Packages: ${current?.availablePackages.map((p) => '${p.identifier} (${p.storeProduct.identifier})').toList()}');
+
+      if (current != null && current.availablePackages.isNotEmpty) {
+        final package = current.availablePackages.first;
+        debugPrint('>>> [DEBUG-KAUF] Übergebe Package an RevenueCat: ${package.identifier} (Product: ${package.storeProduct.identifier})');
+        success = await PurchaseService.purchasePackage(package, ref);
+      } else {
+        debugPrint('>>> [DEBUG-KAUF] Kein Offering-Package verfügbar. Fallback auf getProducts() für ID: ${PurchaseService.productId}');
+        List<StoreProduct> products = await Purchases.getProducts(
+          [PurchaseService.productId],
+          productCategory: ProductCategory.nonSubscription,
         );
-        setState(() => _isLoading = false);
-        return;
+        if (products.isEmpty) {
+          debugPrint('>>> [DEBUG-KAUF] Nicht als nonSubscription gefunden. Probiere subscription...');
+          products = await Purchases.getProducts(
+            [PurchaseService.productId],
+            productCategory: ProductCategory.subscription,
+          );
+        }
+        debugPrint('>>> [DEBUG-KAUF] Gefundene StoreProducts: ${products.map((p) => '${p.identifier} (${p.priceString})').toList()}');
+
+        if (products.isNotEmpty) {
+          final product = products.first;
+          debugPrint('>>> [DEBUG-KAUF] Übergebe StoreProduct an RevenueCat: ${product.identifier}');
+          success = await PurchaseService.purchaseStoreProduct(product, ref);
+        } else {
+          debugPrint('>>> [DEBUG-KAUF-FEHLER] Weder Offering noch StoreProduct in Google Play gefunden!');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Keine Upgrade-Angebote verfügbar.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
       }
-      final package = current.availablePackages.first;
-      final success = await PurchaseService.purchasePackage(package, ref);
+
       if (!mounted) return;
       setState(() => _isLoading = false);
-      if (success) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Willkommen bei FoodSnap AI Pro!'),
-            backgroundColor: Color(0xFF10B981),
-          ),
-        );
+
+      debugPrint('>>> [DEBUG-KAUF] Ergebnis: success=$success, isProUser=${PurchaseService.isProUser}, Hive=${HiveService.getIsProUser()}');
+      if (success || PurchaseService.isProUser || HiveService.getIsProUser()) {
+        _onPurchaseSuccess();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('>>> [DEBUG-KAUF-FEHLER] Fehler beim Kauf: $e');
+      debugPrint('>>> [DEBUG-KAUF-FEHLER] Stacktrace: $stack');
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,25 +133,21 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
   Future<void> _handleRestore() async {
     setState(() => _isLoading = true);
     try {
+      debugPrint('[Purchase] Starte Wiederherstellung aus Paywall-Sheet...');
       final isPremium = await PurchaseService.restorePurchases(ref);
       if (!mounted) return;
       setState(() => _isLoading = false);
-      if (isPremium) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Einkäufe erfolgreich wiederhergestellt!'),
-            backgroundColor: Color(0xFF10B981),
-          ),
-        );
+      if (isPremium || PurchaseService.isProUser || HiveService.getIsProUser()) {
+        _onPurchaseSuccess(message: 'Deine Pro-Version wurde erfolgreich wiederhergestellt!');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Keine aktiven Pro-Käufe gefunden.'),
+            content: Text('Keine aktiven Käufe gefunden.'),
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[Purchase-FEHLER] Wiederherstellung fehlgeschlagen: $e\n$stack');
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,6 +161,12 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(premiumProvider, (previous, next) {
+      if (next) {
+        _onPurchaseSuccess();
+      }
+    });
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
@@ -144,17 +213,20 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Schalte alle Premium-Features frei und genieße eine werbefreie Erfahrung.',
+              widget.customMessage ??
+                  'Schalte alle Premium-Features frei und genieße eine werbefreie Erfahrung.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13.5,
                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                fontWeight: widget.customMessage != null ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
             const SizedBox(height: 20),
-            _buildFeatureRow(Icons.block, '100% werbefrei'),
-            _buildFeatureRow(Icons.bolt, 'Schnellere KI-Scan-Latenz & unbegrenzte Analysen'),
-            _buildFeatureRow(Icons.auto_graph, 'Detaillierte Nährwert- & Gesundheitsanalyse'),
+            _buildFeatureRow(Icons.all_inclusive_rounded, 'Unbegrenzte KI-Mahlzeiten-Scans'),
+            _buildFeatureRow(Icons.block_rounded, '100 % Werbefreiheit (keine Banner, keine Einblendungen)'),
+            _buildFeatureRow(Icons.bolt_rounded, 'Schnellere KI-Scan-Latenz & priorisierte Analysen'),
+            _buildFeatureRow(Icons.auto_graph_rounded, 'Detaillierte Nährwert- & Gesundheitsanalyse'),
             _buildFeatureRow(Icons.cloud_done_outlined, 'Prioritäts-Serverzugang'),
             const SizedBox(height: 24),
             SizedBox(

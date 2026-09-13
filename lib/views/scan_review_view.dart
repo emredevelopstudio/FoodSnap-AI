@@ -33,20 +33,37 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
     super.initState();
     _mealNameController = TextEditingController(text: widget.initialMeal.name);
     _amountMlController = TextEditingController(
-      text: (widget.initialMeal.amountMl != null && widget.initialMeal.amountMl! > 0)
+      text: (widget.initialMeal.amountMl != null &&
+              widget.initialMeal.amountMl! > 0)
           ? widget.initialMeal.amountMl.toString()
           : '',
     );
     final initialWeight = widget.initialMeal.weightGrams ??
         (widget.initialMeal.items.isNotEmpty
-            ? widget.initialMeal.items.fold(0.0, (sum, i) => sum + i.estimatedWeightG).round()
+            ? widget.initialMeal.items
+                .fold(0.0, (sum, i) => sum + i.estimatedWeightG)
+                .round()
             : null);
     _weightGramsController = TextEditingController(
-      text: (initialWeight != null && initialWeight > 0) ? '$initialWeight' : '',
+      text:
+          (initialWeight != null && initialWeight > 0) ? '$initialWeight' : '',
     );
-    _editableItems = widget.initialMeal.items
-        .map((item) => _EditableItem.fromMealItem(item))
-        .toList();
+    final meal = widget.initialMeal;
+    // Keep totals editable when the model could not split the meal into items.
+    final initialItems = meal.items.isEmpty
+        ? [
+            MealItem(
+              name: meal.name,
+              estimatedWeightG: meal.weightGrams?.toDouble() ?? 0,
+              calories: meal.calories.toDouble(),
+              proteinG: meal.protein,
+              carbsG: meal.carbs,
+              fatG: meal.fat,
+            )
+          ]
+        : meal.items;
+    _editableItems =
+        initialItems.map((item) => _EditableItem.fromMealItem(item)).toList();
   }
 
   @override
@@ -320,6 +337,38 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (widget.initialMeal.healthReason != null &&
+                    widget.initialMeal.healthReason!.isNotEmpty) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome,
+                            size: 16, color: Color(0xFF3B82F6)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.initialMeal.healthReason!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF3B82F6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 Text(
                   'Name des Eintrags',
                   style: TextStyle(
@@ -427,7 +476,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
               Expanded(child: _buildSummaryStat('Protein', '${_totalProtein.toStringAsFixed(1)} g', const Color(0xFF3B82F6))),
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
-              Expanded(child: _buildSummaryStat('Carbs', '${_totalCarbs.toStringAsFixed(1)} g', const Color(0xFFF59E0B))),
+              Expanded(child: _buildSummaryStat('Kohlenhydrate', '${_totalCarbs.toStringAsFixed(1)} g', const Color(0xFFF59E0B))),
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
               Expanded(child: _buildSummaryStat('Fett', '${_totalFat.toStringAsFixed(1)} g', const Color(0xFFEF4444))),
             ],
@@ -832,7 +881,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                       controller: item.carbsCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(
-                        labelText: 'Carbs (g)',
+                        labelText: 'Kohlenhydrate (g)',
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),

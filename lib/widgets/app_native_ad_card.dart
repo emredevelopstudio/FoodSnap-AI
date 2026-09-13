@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/ad_service.dart';
+import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
 
 class AppNativeAdCard extends ConsumerStatefulWidget {
@@ -28,8 +29,8 @@ class _AppNativeAdCardState extends ConsumerState<AppNativeAdCard> {
   }
 
   void _loadNativeAd() {
-    final isPremium = ref.read(premiumProvider);
-    if (isPremium) return;
+    final isPro = ref.read(premiumProvider) || PurchaseService.isProUser;
+    if (isPro) return;
     if (!Platform.isAndroid && !Platform.isIOS) return;
     if (_nativeAd != null) return;
 
@@ -113,37 +114,47 @@ class _AppNativeAdCardState extends ConsumerState<AppNativeAdCard> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<bool>(premiumProvider, (previous, next) {
-      if (!next && _nativeAd == null) {
-        _loadNativeAd();
-      } else if (next && _nativeAd != null) {
-        _disposeAd();
-      }
-    });
+    return ValueListenableBuilder<bool>(
+      valueListenable: PurchaseService.proStatusNotifier,
+      builder: (context, proNotifier, _) {
+        final proRiverpod = ref.watch(premiumProvider);
+        final isPro = proNotifier ||
+            PurchaseService.proStatusNotifier.value ||
+            HiveService.getIsProUser() ||
+            proRiverpod ||
+            PurchaseService.isProUser;
 
-    final isPremium = ref.watch(premiumProvider);
-    if (isPremium || !_isLoaded || _nativeAd == null) {
-      return const SizedBox.shrink();
-    }
+        debugPrint('[AppNativeAdCard] Build aufgerufen - isPro: $isPro');
 
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+        if (isPro) {
+          _disposeAd();
+          return const SizedBox.shrink();
+        }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.grey.shade800 : const Color(0xFFE2E8F0),
-          width: 0.8,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        height: 350,
-        child: AdWidget(ad: _nativeAd!),
-      ),
+        if (!_isLoaded || _nativeAd == null) {
+          return const SizedBox.shrink();
+        }
+
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? Colors.grey.shade800 : const Color(0xFFE2E8F0),
+              width: 0.8,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            height: 350,
+            child: AdWidget(ad: _nativeAd!),
+          ),
+        );
+      },
     );
   }
 }

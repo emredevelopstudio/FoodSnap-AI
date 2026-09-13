@@ -9,6 +9,10 @@ import '../models/meal_entry.dart';
 import '../providers/meal_provider.dart';
 import '../services/hive_service.dart';
 import '../services/image_storage_service.dart';
+import '../services/image_mime_type.dart';
+import '../services/purchase_service.dart';
+import '../services/gemini_service.dart';
+import '../widgets/pro_upgrade_sheet.dart';
 import '../widgets/meal_card.dart';
 import '../widgets/progress_card.dart';
 import '../l10n/app_localizations.dart';
@@ -16,67 +20,108 @@ import 'manual_entry_view.dart';
 import 'scan_review_view.dart';
 import 'settings_view.dart';
 
+final _scanInProgressProvider = StateProvider<bool>((ref) => false);
+
 class DashboardView extends ConsumerWidget {
   const DashboardView({super.key});
 
-  Future<void> _pickAndAnalyzeImage(BuildContext context, WidgetRef ref, ImageSource source) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: source,
-      maxWidth: 720,
-      maxHeight: 720,
-      imageQuality: 70,
-    );
-    if (image == null) return;
+  Future<void> _pickAndAnalyzeImage(
+      BuildContext context, WidgetRef ref, ImageSource source) async {
+    final scanInProgress = ref.read(_scanInProgressProvider.notifier);
+    if (scanInProgress.state) return;
+    scanInProgress.state = true;
+    final statusNotifier =
+        ValueNotifier<String>('Lebensmittel & Nährwerte werden berechnet');
+    DialogRoute<void>? loadingRoute;
+    NavigatorState? loadingNavigator;
+    void closeLoadingDialog() {
+      final route = loadingRoute;
+      if (route != null && route.isActive) {
+        loadingNavigator?.removeRoute(route);
+      }
+      loadingRoute = null;
+    }
 
-    print("DEBUG: Bild ausgewählt: ${image.path}");
+    try {
+      if (!PurchaseService.isProUser && !HiveService.hasFreeScansRemaining()) {
+        await ProUpgradeSheet.show(
+          context,
+          customMessage:
+              'Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.',
+        );
+        return;
+      }
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: source,
+        maxWidth: 720,
+        maxHeight: 720,
+        imageQuality: 70,
+      );
+      if (image == null) return;
 
-    final imageBytes = await image.readAsBytes();
+      print("DEBUG: Bild ausgewählt: ${image.path}");
 
-    if (!context.mounted) return;
+      final imageBytes = await image.readAsBytes();
+      final mimeType = detectImageMimeType(imageBytes, filePath: image.path);
 
-    final localImagePathFuture = ImageStorageService.saveImagePermanently(image.path);
+      if (!context.mounted) return;
 
-    final statusNotifier = ValueNotifier<String>('Lebensmittel & Nährwerte werden berechnet');
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Center(
-        child: Card(
-          margin: const EdgeInsets.all(24),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 20),
-                const Text(
-                  'Analysiere Bild...',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      final visionService = ref.read(geminiVisionServiceProvider);
+      if (!PurchaseService.isProUser && !HiveService.hasFreeScansRemaining()) {
+        if (!context.mounted) return;
+        await ProUpgradeSheet.show(
+          context,
+          customMessage:
+              'Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.',
+        );
+        return;
+      }
+      if (!context.mounted) return;
+      loadingNavigator = Navigator.of(context, rootNavigator: true);
+      loadingRoute = DialogRoute<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => PopScope(
+          canPop: false,
+          child: Center(
+            child: Card(
+              margin: const EdgeInsets.all(24),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Analysiere Bild...',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 6),
+                    ValueListenableBuilder<String>(
+                      valueListenable: statusNotifier,
+                      builder: (ctx, status, _) => Text(
+                        status,
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                ValueListenableBuilder<String>(
-                  valueListenable: statusNotifier,
-                  builder: (ctx, status, _) => Text(
-                    status,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+      loadingNavigator.push(loadingRoute!);
 
-    try {
-      final visionService = ref.read(geminiVisionServiceProvider);
       final analysisFuture = visionService.analyzeFoodImage(
         imageBytes: imageBytes,
-        mimeType: 'image/jpeg',
+        mimeType: mimeType,
         onStatusUpdate: (newStatus) {
           statusNotifier.value = newStatus;
         },
@@ -84,14 +129,19 @@ class DashboardView extends ConsumerWidget {
 
       final results = await Future.wait([
         analysisFuture,
-        localImagePathFuture,
+        ImageStorageService.saveImagePermanently(image.path),
       ]);
 
       final meal = results[0] as MealEntry;
       final localImagePath = results[1] as String;
 
+      // Jeder erfolgreiche Scan erhöht den Zähler um 1 (nur bei Nicht-Pro-Nutzern)
+      if (!PurchaseService.isProUser) {
+        await HiveService.incrementDailyScansCount();
+      }
+
       if (!context.mounted) return;
-      Navigator.of(context).pop();
+      closeLoadingDialog();
 
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -103,10 +153,37 @@ class DashboardView extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      Navigator.of(context).pop();
+      closeLoadingDialog();
 
       debugPrint('SCAN_ERROR UI: $e');
-      final errorText = e.toString().replaceFirst('Exception: ', '');
+      final String errorText;
+      if (e is ScanRateLimitException) {
+        errorText = e.toString();
+      } else if (GeminiVisionService.isRateLimitError(e)) {
+        errorText = ScanRateLimitException.message;
+      } else if (e is ScanAnalysisException) {
+        errorText = e.toString();
+      } else if (e is FormatException) {
+        errorText = e.message;
+      } else {
+        final raw = e.toString().replaceFirst('Exception: ', '').trim();
+        final lower = raw.toLowerCase();
+        if (lower.contains('api') ||
+            lower.contains('generative') ||
+            lower.contains('socket') ||
+            lower.contains('http') ||
+            lower.contains('client') ||
+            lower.contains('server') ||
+            lower.contains('longer available') ||
+            lower.contains('status code') ||
+            lower.contains('failed')) {
+          errorText = 'Fehler bei der Analyse. Bitte versuche es erneut.';
+        } else {
+          errorText = raw.isNotEmpty
+              ? raw
+              : 'Fehler bei der Analyse. Bitte versuche es erneut.';
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -115,39 +192,178 @@ class DashboardView extends ConsumerWidget {
           duration: const Duration(seconds: 6),
         ),
       );
+    } finally {
+      closeLoadingDialog();
+      statusNotifier.dispose();
+      scanInProgress.state = false;
     }
   }
 
   void _showImageSourceDialog(BuildContext context, WidgetRef ref) {
+    if (!PurchaseService.isProUser && !HiveService.hasFreeScansRemaining()) {
+      ProUpgradeSheet.show(
+        context,
+        customMessage:
+            'Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.',
+      );
+      return;
+    }
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Text(
+                  'Mahlzeit erfassen',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Option 1: Foto aufnehmen
               ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.camera_alt)),
-                title: const Text('Kamera verwenden'),
-                subtitle: const Text('Foto der Mahlzeit direkt aufnehmen'),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF2A2A2A)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.photo_camera_rounded,
+                      color: Color(0xFF10B981),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  'Foto aufnehmen',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+                subtitle: Text(
+                  'Mahlzeit live fotografieren',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: isDark
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF94A3B8),
+                  size: 22,
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAnalyzeImage(context, ref, ImageSource.camera);
                 },
               ),
+              const SizedBox(height: 10),
+              // Option 2: Aus Album wählen
               ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.photo_library)),
-                title: const Text('Aus Galerie / Dateisystem wählen'),
-                subtitle: const Text('Vorhandenes Foto hochladen'),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF2A2A2A)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.photo_library_rounded,
+                      color: Color(0xFF3B82F6),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  'Aus Album wählen',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+                subtitle: Text(
+                  'Bild aus der Galerie importieren',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: isDark
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF94A3B8),
+                  size: 22,
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAnalyzeImage(context, ref, ImageSource.gallery);
                 },
               ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -157,6 +373,8 @@ class DashboardView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isPro = ref.watch(premiumProvider);
+    debugPrint('[DashboardView] Build aufgerufen - isPro: $isPro');
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final progress = ref.watch(dailyProgressProvider);
@@ -185,15 +403,39 @@ class DashboardView extends ConsumerWidget {
                       letterSpacing: -0.5,
                       color: isDark ? Colors.white : const Color(0xFF64748B),
                     ),
-                    children: const [
-                      TextSpan(text: 'FoodSnap '),
-                      TextSpan(
+                    children: [
+                      const TextSpan(text: 'FoodSnap '),
+                      const TextSpan(
                         text: 'AI',
                         style: TextStyle(
                           color: Color(0xFF1E88E5),
                           fontWeight: FontWeight.w800,
                         ),
                       ),
+                      if (isPro)
+                        const WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Color(0xFF10B981),
+                                borderRadius: BorderRadius.all(Radius.circular(6)),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                child: Text(
+                                  'PRO',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

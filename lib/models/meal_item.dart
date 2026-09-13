@@ -1,3 +1,5 @@
+import 'nutrition_value.dart';
+
 class MealItem {
   final String name;
   final double estimatedWeightG;
@@ -50,24 +52,24 @@ class MealItem {
 
   factory MealItem.fromMap(Map<String, dynamic> map) {
     return MealItem(
-      name: map['name'] as String? ?? 'Lebensmittel',
-      estimatedWeightG: (map['amount_grams'] as num?)?.toDouble() ??
-          (map['amountGrams'] as num?)?.toDouble() ??
-          (map['estimatedWeightG'] as num?)?.toDouble() ??
-          (map['estimated_weight_g'] as num?)?.toDouble() ??
+      name: map['name']?.toString() ?? 'Lebensmittel',
+      estimatedWeightG: parseNutritionValue(map['amount_grams']) ??
+          parseNutritionValue(map['amountGrams']) ??
+          parseNutritionValue(map['estimatedWeightG']) ??
+          parseNutritionValue(map['estimated_weight_g']) ??
           0.0,
-      calories: (map['calories'] as num?)?.toDouble() ?? 0.0,
-      proteinG: (map['protein'] as num?)?.toDouble() ??
-          (map['proteinG'] as num?)?.toDouble() ??
-          (map['protein_g'] as num?)?.toDouble() ??
+      calories: parseNutritionValue(map['calories']) ?? 0.0,
+      proteinG: parseNutritionValue(map['protein']) ??
+          parseNutritionValue(map['proteinG']) ??
+          parseNutritionValue(map['protein_g']) ??
           0.0,
-      carbsG: (map['carbs'] as num?)?.toDouble() ??
-          (map['carbsG'] as num?)?.toDouble() ??
-          (map['carbs_g'] as num?)?.toDouble() ??
+      carbsG: parseNutritionValue(map['carbs']) ??
+          parseNutritionValue(map['carbsG']) ??
+          parseNutritionValue(map['carbs_g']) ??
           0.0,
-      fatG: (map['fat'] as num?)?.toDouble() ??
-          (map['fatG'] as num?)?.toDouble() ??
-          (map['fat_g'] as num?)?.toDouble() ??
+      fatG: parseNutritionValue(map['fat']) ??
+          parseNutritionValue(map['fatG']) ??
+          parseNutritionValue(map['fat_g']) ??
           0.0,
     );
   }

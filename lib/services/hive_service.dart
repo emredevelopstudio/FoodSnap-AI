@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 import '../models/meal_entry.dart';
 import '../models/daily_goals.dart';
 import '../models/user_profile.dart';
@@ -13,12 +12,11 @@ class HiveService {
   static const String goalsKey = 'daily_goals';
   static const String profileKey = 'user_profile';
   static const String themeKey = 'theme_mode';
+  static const String isDarkModeKey = 'is_dark_mode';
   static const String localeKey = 'app_locale';
   static const String creatineWaterKey = 'creatine_water_ml';
 
   static Future<void> init() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    await Hive.initFlutter(appDir.path);
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(MealEntryAdapter());
     }
@@ -83,20 +81,45 @@ class HiveService {
     return const UserProfile();
   }
 
+  /// Prüft, ob der Nachtmodus aktiv ist.
+  /// Falls der Key 'is_dark_mode' noch nie gesetzt wurde, wird der Systemstatus abgefragt
+  /// und initial persistent gespeichert, sodass UI-Switch und ThemeMode von Beginn an synchron sind.
+  static bool isDarkMode() {
+    try {
+      final rawDark = _settingsBox.get(isDarkModeKey);
+      if (rawDark != null && rawDark['enabled'] != null) {
+        return rawDark['enabled'] == true;
+      }
+
+      final rawTheme = _settingsBox.get(themeKey);
+      if (rawTheme != null && rawTheme['mode'] != null) {
+        final modeName = rawTheme['mode'] as String;
+        if (modeName == 'dark') return true;
+        if (modeName == 'light') return false;
+      }
+
+      // Default: Systemstatus des Geräts abfragen
+      final systemIsDark =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+      setDarkMode(systemIsDark);
+      return systemIsDark;
+    } catch (_) {
+      return true; // Sicherer Fallback (Dark Theme)
+    }
+  }
+
+  /// Speichert den Dark-Mode Status persistent in Hive
+  static Future<void> setDarkMode(bool isDark) async {
+    await _settingsBox.put(isDarkModeKey, {'enabled': isDark});
+    await _settingsBox.put(themeKey, {'mode': isDark ? 'dark' : 'light'});
+  }
+
   static Future<void> saveThemeMode(ThemeMode mode) async {
-    await _settingsBox.put(themeKey, {'mode': mode.name});
+    await setDarkMode(mode == ThemeMode.dark);
   }
 
   static ThemeMode getThemeMode() {
-    final raw = _settingsBox.get(themeKey);
-    if (raw != null && raw['mode'] != null) {
-      final name = raw['mode'] as String;
-      return ThemeMode.values.firstWhere(
-        (e) => e.name == name,
-        orElse: () => ThemeMode.system,
-      );
-    }
-    return ThemeMode.system;
+    return isDarkMode() ? ThemeMode.dark : ThemeMode.light;
   }
 
   static Future<void> saveLocale(Locale locale) async {
@@ -142,6 +165,84 @@ class HiveService {
       return (raw['ml'] as num).toInt();
     }
     return 150;
+  }
+
+  static const String isProUserKey = 'is_pro_user';
+
+  static bool getIsProUser() {
+    final raw = _settingsBox.get(isProUserKey);
+    if (raw != null && raw['is_pro'] != null) {
+      return raw['is_pro'] == true;
+    }
+    return false;
+  }
+
+  static Future<void> setIsProUser(bool isPro) async {
+    await _settingsBox.put(isProUserKey, {'is_pro': isPro});
+  }
+
+  static const int maxFreeDailyScans = 5;
+  static const String dailyScansCountKey = 'daily_scans_count';
+  static const String dailyScanDateKey = 'daily_scan_date';
+
+  static String _formatIsoDate(DateTime date) =>
+      date.toIso8601String().substring(0, 10);
+
+  /// Synchronisiert das Datum und setzt bei Datumswechsel den Zähler auf 0 zurück
+  static void _checkAndResetDailyCounter([DateTime? date]) {
+    final todayStr = _formatIsoDate(date ?? DateTime.now());
+    final savedDate = _settingsBox.get(dailyScanDateKey)?['date'] as String?;
+    if (savedDate != todayStr) {
+      _settingsBox.put(dailyScanDateKey, {'date': todayStr});
+      _settingsBox.put(dailyScansCountKey, {'count': 0});
+    }
+  }
+
+  static int getDailyScansCount([DateTime? date]) {
+    _checkAndResetDailyCounter(date);
+    final raw = _settingsBox.get(dailyScansCountKey);
+    if (raw != null && raw['count'] != null) {
+      return (raw['count'] as num).toInt();
+    }
+    return 0;
+  }
+
+  static Future<void> incrementDailyScansCount([DateTime? date]) async {
+    _checkAndResetDailyCounter(date);
+    final current = getDailyScansCount(date);
+    await _settingsBox.put(dailyScansCountKey, {'count': current + 1});
+  }
+
+  static bool hasFreeScansRemaining([DateTime? date]) {
+    return getDailyScansCount(date) < maxFreeDailyScans;
+  }
+
+  static int getRemainingDailyScans([DateTime? date]) {
+    final remaining = maxFreeDailyScans - getDailyScansCount(date);
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  // Abwärtskompatible Aliase
+  static int getTotalScansCount([DateTime? date]) => getDailyScansCount(date);
+  static Future<void> incrementTotalScansCount([DateTime? date]) => incrementDailyScansCount(date);
+  static int getRemainingFreeScans([DateTime? date]) => getRemainingDailyScans(date);
+
+  static const int dailyFreeScanLimit = 5;
+  static Future<void> _scanQueue = Future<void>.value();
+
+  static bool hasDailyScanAvailable(DateTime date) =>
+      getDailyScansUsed(date) < dailyFreeScanLimit + getDailyBonusScans(date);
+
+  /// Reserve a scan before the API call; serialize check and write so rapid
+  /// requests cannot exceed the daily allowance. Each local date has its own key.
+  static Future<bool> tryConsumeDailyScan(DateTime date) {
+    final result = _scanQueue.then((_) async {
+      if (!hasDailyScanAvailable(date)) return false;
+      await incrementDailyScansUsed(date);
+      return true;
+    });
+    _scanQueue = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
   }
 
   static String _scanDateKey(DateTime date) =>

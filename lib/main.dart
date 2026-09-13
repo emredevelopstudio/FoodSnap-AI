@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:path_provider/path_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
@@ -19,14 +18,21 @@ void main() async {
   await MobileAds.instance.initialize();
   await AdService.init();
   await initializeDateFormatting('de_DE', null);
-  final appDir = await getApplicationDocumentsDirectory();
-  await Hive.initFlutter(appDir.path);
+  await Hive.initFlutter();
   await HiveService.init();
 
   // RevenueCat Service vor App-Start initialisieren
   await PurchaseService.init();
 
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+    // ignore: avoid_print
+    print('>>> CHECK KEY: ${dotenv.env['GEMINI_API_KEY'] != null ? "KEY VORHANDEN" : "KEY IST NULL/LEER"}');
+  } catch (e) {
+    // ignore: avoid_print
+    print('>>> CHECK KEY: KEY IST NULL/LEER ($e)');
+    debugPrint('Hinweis: .env nicht geladen ($e). API-Keys können via --dart-define bereitgestellt werden.');
+  }
 
   runApp(
     const ProviderScope(

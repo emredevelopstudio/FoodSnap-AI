@@ -18,36 +18,112 @@ class SettingsView extends ConsumerStatefulWidget {
 }
 
 class _SettingsViewState extends ConsumerState<SettingsView> {
+  @override
+  void initState() {
+    super.initState();
+    PurchaseService.proStatusNotifier.addListener(_onProNotifierChanged);
+  }
+
+  void _onProNotifierChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    PurchaseService.proStatusNotifier.removeListener(_onProNotifierChanged);
+    super.dispose();
+  }
+
   Future<void> _handleUpgrade() async {
     try {
+      debugPrint('>>> [DEBUG-KAUF] Upgrade-Button in Settings gedrückt!');
+      bool success = false;
+      debugPrint('>>> [DEBUG-KAUF] Rufe Offerings ab...');
       final offerings = await Purchases.getOfferings();
       final currentOffering = offerings.current;
-      if (currentOffering == null || currentOffering.availablePackages.isEmpty) {
-        if (!mounted) return;
+
+      if (currentOffering != null && currentOffering.availablePackages.isNotEmpty) {
+        final package = currentOffering.availablePackages.first;
+        debugPrint('>>> [DEBUG-KAUF] Verwende Package: ${package.identifier} (${package.storeProduct.identifier})');
+        success = await PurchaseService.purchasePackage(package, ref);
+      } else {
+        debugPrint('>>> [DEBUG-KAUF] Fallback auf StoreProduct ID: ${PurchaseService.productId}');
+        List<StoreProduct> products = await Purchases.getProducts(
+          [PurchaseService.productId],
+          productCategory: ProductCategory.nonSubscription,
+        );
+        if (products.isEmpty) {
+          products = await Purchases.getProducts(
+            [PurchaseService.productId],
+            productCategory: ProductCategory.subscription,
+          );
+        }
+        if (products.isNotEmpty) {
+          success = await PurchaseService.purchaseStoreProduct(products.first, ref);
+        } else {
+          debugPrint('>>> [DEBUG-KAUF-FEHLER] Keine Upgrade-Angebote oder Produkte in Google Play verfügbar.');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Keine Upgrade-Angebote verfügbar.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      }
+
+      if (!mounted) return;
+      if (success || PurchaseService.isProUser || HiveService.getIsProUser()) {
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Keine Upgrade-Angebote verfügbar.'),
-            backgroundColor: Colors.orange,
+            content: Text('Vielen Dank! FoodSnap AI Pro wurde erfolgreich aktiviert.'),
+            backgroundColor: Color(0xFF10B981),
           ),
         );
-        return;
       }
-      final package = currentOffering.availablePackages.first;
-      final success = await PurchaseService.purchasePackage(package, ref);
+    } catch (e, stack) {
+      debugPrint('>>> [DEBUG-KAUF-FEHLER] Upgrade in Settings fehlgeschlagen: $e\n$stack');
       if (!mounted) return;
-      if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Upgrade fehlgeschlagen: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  bool _isRestoringPurchases = false;
+
+  Future<void> _handleRestorePurchases() async {
+    setState(() => _isRestoringPurchases = true);
+    try {
+      final isPremium = await PurchaseService.restorePurchases(ref);
+      if (!mounted) return;
+      setState(() => _isRestoringPurchases = false);
+      if (isPremium || PurchaseService.isProUser) {
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Willkommen bei FoodSnap AI Pro!'),
+            content: Text('Deine Pro-Version wurde erfolgreich wiederhergestellt!'),
             backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Keine aktiven Käufe gefunden.'),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
+      setState(() => _isRestoringPurchases = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Upgrade fehlgeschlagen: $e'),
+          content: Text('Fehler bei der Wiederherstellung: $e'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -150,9 +226,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final currentThemeMode = ref.watch(themeModeProvider);
+    final isDarkMode = ref.watch(isDarkModeProvider);
     final currentLocale = ref.watch(localeProvider);
-    final isPremium = ref.watch(premiumProvider);
+    ref.watch(premiumProvider);
     final l10n = context.l10n;
 
     final scaffoldBg = isDark ? const Color(0xFF121212) : const Color(0xFFFBFBF9);
@@ -170,71 +246,122 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
         padding: const EdgeInsets.all(18),
         children: [
           // FoodSnap AI Pro Card
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isPremium
-                    ? const Color(0xFF10B981)
-                    : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E8F0)),
-                width: isPremium ? 1.5 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+          ValueListenableBuilder<bool>(
+            valueListenable: PurchaseService.proStatusNotifier,
+            builder: (context, proNotifierVal, _) {
+              final isPro = ref.watch(premiumProvider) ||
+                  HiveService.getIsProUser() ||
+                  proNotifierVal ||
+                  PurchaseService.isProUser;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isPro
+                        ? const Color(0xFF10B981)
+                        : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E8F0)),
+                    width: isPro ? 1.5 : 1,
                   ),
-                  child: Icon(
-                    isPremium ? Icons.verified : Icons.workspace_premium_outlined,
-                    color: const Color(0xFF10B981),
-                    size: 26,
-                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                title: Text(
-                  isPremium ? 'FoodSnap AI Pro aktiv' : 'FoodSnap AI Pro freischalten',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15.5),
-                ),
-                subtitle: Text(
-                  isPremium ? 'Werbung dauerhaft deaktiviert' : 'Keine Werbung & unbegrenzte Features',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  ),
-                ),
-                trailing: isPremium
-                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28)
-                    : ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Icon(
+                            isPro ? Icons.verified : Icons.workspace_premium_outlined,
+                            color: const Color(0xFF10B981),
+                            size: 26,
+                          ),
                         ),
-                        onPressed: _handleUpgrade,
-                        child: const Text(
-                          'Upgrade',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        title: Text(
+                          isPro ? 'FoodSnap AI Pro aktiv' : 'FoodSnap AI Pro freischalten',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15.5),
                         ),
+                        subtitle: Text(
+                          isPro ? 'Werbung dauerhaft deaktiviert' : 'Keine Werbung & unbegrenzte Features',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          ),
+                        ),
+                        trailing: isPro
+                            ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28)
+                            : ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                ),
+                                onPressed: _handleUpgrade,
+                                child: const Text(
+                                  'Upgrade',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
                       ),
-              ),
-            ),
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF1F5F9),
+                      ),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.restore_rounded,
+                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                            size: 20,
+                          ),
+                        ),
+                        title: const Text(
+                          'Käufe wiederherstellen',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        trailing: _isRestoringPurchases
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(
+                                Icons.chevron_right,
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                size: 18,
+                              ),
+                        onTap: _isRestoringPurchases ? null : _handleRestorePurchases,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
 
@@ -276,7 +403,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   isDark ? l10n.darkThemeActive : l10n.lightThemeActive,
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
-                value: currentThemeMode == ThemeMode.dark,
+                value: isDarkMode,
                 onChanged: (val) {
                   ref.read(themeModeProvider.notifier).toggleTheme(val);
                 },
@@ -465,16 +592,18 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   'Pro-Status simulieren (Dev)',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-                subtitle: const Text(
-                  'Zwischen Free- und Pro-Modus wechseln',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                subtitle: Text(
+                  HiveService.getIsProUser()
+                      ? 'Echter Kauf in Hive aktiv (Pro bleibt aktiv)'
+                      : (PurchaseService.devOverrideIsPremium == true
+                          ? 'Simulation aktiv (Pro aktiviert)'
+                          : 'Simulation aus (Free-Modus)'),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                value: PurchaseService.isPremium,
+                value: PurchaseService.devOverrideIsPremium ?? false,
                 onChanged: (val) {
-                  setState(() {
-                    PurchaseService.setDevPremiumOverride(val);
-                  });
-                  ref.invalidate(premiumProvider);
+                  PurchaseService.setDevOverrideIsPremium(val, ref);
+                  setState(() {});
                 },
               ),
             ),

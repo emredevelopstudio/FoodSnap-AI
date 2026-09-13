@@ -1,15 +1,20 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'purchase_service.dart';
 
 class AdService {
-  static const String _realBannerUnitIdAndroid = 'ca-app-pub-8940664066373911/1463880581';
+  /// Diagnoseschalter: Bei `true` werden auch im Release-Build die offiziellen
+  /// Google-Test-IDs verwendet, um No-Fill-Probleme (Error 3) von Codefehlern zu unterscheiden.
+  static const bool forceTestAds = false;
+
+  static const String _realBannerUnitIdAndroid = 'ca-app-pub-9627194765500923/1163571642';
   static const String _testBannerUnitIdAndroid = 'ca-app-pub-3940256099942544/6300978111';
 
-  static const String _realNativeUnitIdAndroid = 'ca-app-pub-8940664066373911/6692156538';
+  static const String _realNativeUnitIdAndroid = 'ca-app-pub-9627194765500923/3789734985';
   static const String _testNativeUnitIdAndroid = 'ca-app-pub-3940256099942544/2247696110';
 
-  static const String _realCalculatorNativeUnitIdAndroid = 'ca-app-pub-8940664066373911/5786268976';
+  static const String _realCalculatorNativeUnitIdAndroid = 'ca-app-pub-9627194765500923/6144435584';
   static const String _testCalculatorNativeUnitIdAndroid = 'ca-app-pub-3940256099942544/2247696110';
 
   static const String _realInterstitialUnitIdAndroid = 'ca-app-pub-8940664066373911/1110024346';
@@ -26,13 +31,14 @@ class AdService {
 
   /// Gibt die Banner Ad Unit ID basierend auf Modus und Plattform zurück
   static String get bannerAdUnitId {
-    if (kDebugMode) {
+    if (kDebugMode || forceTestAds) {
       return _testBannerUnitIdAndroid;
     }
 
     if (Platform.isAndroid) {
       return _realBannerUnitIdAndroid;
     } else if (Platform.isIOS) {
+      // Test-Banner für iOS als Fallback
       return 'ca-app-pub-3940256099942544/2934735716';
     }
 
@@ -41,7 +47,7 @@ class AdService {
 
   /// Gibt die Native Ad Unit ID basierend auf Modus und Plattform zurück
   static String get nativeAdUnitId {
-    if (kDebugMode) {
+    if (kDebugMode || forceTestAds) {
       return _testNativeUnitIdAndroid;
     }
 
@@ -56,7 +62,7 @@ class AdService {
 
   /// Gibt die Native Ad Unit ID für den Rechner basierend auf Modus und Plattform zurück
   static String get calculatorNativeAdUnitId {
-    if (kDebugMode) {
+    if (kDebugMode || forceTestAds) {
       return _testCalculatorNativeUnitIdAndroid;
     }
 
@@ -71,13 +77,14 @@ class AdService {
 
   /// Gibt die Interstitial Ad Unit ID basierend auf Modus und Plattform zurück
   static String get interstitialAdUnitId {
-    if (kDebugMode) {
+    if (kDebugMode || forceTestAds) {
       return _testInterstitialUnitIdAndroid;
     }
 
     if (Platform.isAndroid) {
       return _realInterstitialUnitIdAndroid;
     } else if (Platform.isIOS) {
+      // Test-Interstitial für iOS als Fallback
       return 'ca-app-pub-3940256099942544/4411468910';
     }
 
@@ -86,36 +93,39 @@ class AdService {
 
   /// Gibt die Rewarded Ad Unit ID basierend auf Modus und Plattform zurück
   static String get rewardedAdUnitId {
-    if (kDebugMode) {
+    if (kDebugMode || forceTestAds) {
       return _testRewardedUnitIdAndroid;
     }
 
     if (Platform.isAndroid) {
       return _realRewardedUnitIdAndroid;
     } else if (Platform.isIOS) {
+      // Test-Rewarded für iOS als Fallback
       return 'ca-app-pub-3940256099942544/1712485313';
     }
 
     return _testRewardedUnitIdAndroid;
   }
 
-  /// Initialisiert das Google Mobile Ads SDK und lädt Interstitial & Rewarded Ads vor
+  /// Initialisiert das Google Mobile Ads SDK und lädt Interstitial & Rewarded Ads vor (nur bei Nicht-Pro-Nutzern)
   static Future<void> init() async {
     try {
       await MobileAds.instance.initialize();
-      loadInterstitialAd();
-      loadRewardedAd();
+      if (!PurchaseService.isProUser) {
+        loadInterstitialAd();
+        loadRewardedAd();
+      }
     } catch (e) {
-      debugPrint('[AdService] Fehler bei der Initialisierung von MobileAds: $e');
+      debugPrint('Fehler bei der Initialisierung von MobileAds: $e');
     }
   }
 
-  /// Lädt eine Interstitial-Ad vor, falls noch keine geladen ist
+  /// Lädt eine Interstitial-Ad vor, falls noch keine geladen ist (und der Nutzer kein Pro hat)
   static void loadInterstitialAd() {
+    if (PurchaseService.isProUser) return;
     if (_interstitialAd != null || _isInterstitialLoading) return;
 
     _isInterstitialLoading = true;
-    debugPrint('[AdService] Lade InterstitialAd...');
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -123,62 +133,60 @@ class AdService {
         onAdLoaded: (ad) {
           _interstitialAd = ad;
           _isInterstitialLoading = false;
-          debugPrint('[AdService] InterstitialAd erfolgreich geladen.');
+          debugPrint('InterstitialAd erfolgreich vorgeladen.');
         },
         onAdFailedToLoad: (error) {
           _interstitialAd = null;
           _isInterstitialLoading = false;
-          debugPrint('[AdService] Fehler beim Laden der InterstitialAd: $error');
+          debugPrint('Fehler beim Vorladen der InterstitialAd: $error');
         },
       ),
     );
   }
 
-  /// Zeigt die Interstitial-Ad an (mit Premium-Bypass)
+  /// Zeigt die Interstitial-Ad an (mit Pro-Bypass: Werbefreiheit für Pro-Käufer)
   static void showInterstitialAd({
     required bool isPremium,
     VoidCallback? onDismissed,
   }) {
-    // 1. Wenn Premium aktiv ist: Direkt fortfahren
-    if (isPremium) {
+    // 1. Wenn Pro aktiv ist: Sofort fortfahren, 100% werbefrei
+    if (isPremium || PurchaseService.isProUser) {
       onDismissed?.call();
       return;
     }
 
     // 2. Wenn Interstitial verfügbar ist
     if (_interstitialAd != null) {
-      final adToShow = _interstitialAd!;
-      _interstitialAd = null;
-
-      adToShow.fullScreenContentCallback = FullScreenContentCallback(
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
+          _interstitialAd = null;
           loadInterstitialAd();
           onDismissed?.call();
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
-          debugPrint('[AdService] Fehler beim Anzeigen der InterstitialAd: $error');
+          debugPrint('Fehler beim Anzeigen der InterstitialAd: $error');
           ad.dispose();
+          _interstitialAd = null;
           loadInterstitialAd();
           onDismissed?.call();
         },
       );
 
-      adToShow.show();
+      _interstitialAd!.show();
     } else {
-      // 3. Wenn keine Ad bereitsteht: Sofort nachladen und weiterleiten
-      debugPrint('[AdService] Interstitial not ready, loading now...');
-      loadInterstitialAd();
+      // 3. Wenn keine Ad bereitsteht: Sofort weiterleiten & nachladen
       onDismissed?.call();
+      loadInterstitialAd();
     }
   }
 
-  /// Lädt eine Rewarded-Ad vor, falls noch keine geladen ist
+  /// Lädt eine Rewarded-Ad vor, falls noch keine geladen ist (und der Nutzer kein Pro hat)
   static void loadRewardedAd() {
+    if (PurchaseService.isProUser) return;
     if (_rewardedAd != null || _isRewardedLoading) return;
 
     _isRewardedLoading = true;
-    debugPrint('[AdService] Lade RewardedAd...');
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
@@ -186,27 +194,32 @@ class AdService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isRewardedLoading = false;
-          debugPrint('[AdService] RewardedAd erfolgreich geladen.');
+          debugPrint('RewardedAd erfolgreich vorgeladen.');
         },
         onAdFailedToLoad: (error) {
           _rewardedAd = null;
           _isRewardedLoading = false;
-          debugPrint('[AdService] Fehler beim Laden der RewardedAd: $error');
+          debugPrint('Fehler beim Vorladen der RewardedAd: $error');
         },
       ),
     );
   }
 
-  /// Zeigt die Rewarded-Ad an und belohnt den Nutzer
+  /// Zeigt die Rewarded-Ad an und belohnt den Nutzer (oder belohnt Pro-Nutzer direkt ohne Ad)
   static void showRewardedAd({
     required VoidCallback onUserEarnedReward,
     VoidCallback? onDismissed,
     VoidCallback? onFailedToLoad,
   }) {
+    if (PurchaseService.isProUser) {
+      onUserEarnedReward();
+      onDismissed?.call();
+      return;
+    }
+
     if (_rewardedAd == null) {
-      debugPrint('[AdService] Rewarded Ad not ready, loading now...');
-      loadRewardedAd();
       onFailedToLoad?.call();
+      loadRewardedAd();
       return;
     }
 
@@ -220,7 +233,7 @@ class AdService {
         onDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
-        debugPrint('[AdService] Fehler beim Anzeigen der RewardedAd: $error');
+        debugPrint('Fehler beim Anzeigen der RewardedAd: $error');
         ad.dispose();
         loadRewardedAd();
         onDismissed?.call();
@@ -234,4 +247,3 @@ class AdService {
     );
   }
 }
-
