@@ -7,11 +7,17 @@ import '../services/hive_service.dart';
 class DailyGoalsNotifier extends StateNotifier<DailyGoals> {
   DailyGoalsNotifier() : super(HiveService.getDailyGoals());
 
-  Future<void> updateGoals(
-      {double? targetCalories, double? targetProteinG}) async {
+  Future<void> updateGoals({
+    double? targetCalories,
+    double? targetProteinG,
+    double? targetCarbsG,
+    double? targetFatG,
+  }) async {
     final updated = state.copyWith(
       targetCalories: targetCalories,
       targetProteinG: targetProteinG,
+      targetCarbsG: targetCarbsG,
+      targetFatG: targetFatG,
     );
     state = updated;
     await HiveService.saveDailyGoals(updated);
@@ -38,6 +44,8 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
       await ref.read(dailyGoalsProvider.notifier).updateGoals(
             targetCalories: calculated.calories,
             targetProteinG: calculated.protein,
+            targetCarbsG: calculated.carbs,
+            targetFatG: calculated.fat,
           );
     }
   }

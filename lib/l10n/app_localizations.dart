@@ -81,6 +81,9 @@ class AppLocalizations {
       'activity_light': 'Leichte Aktivität (1-3x Sport/Woche)',
       'activity_moderate': 'Moderate Aktivität (3-5x Sport/Woche)',
       'activity_very': 'Sehr aktiv (6-7x Sport/Woche)',
+      'activity_extremely': 'Extrem aktiv (Schwerstarbeit / tägl. hartes Training)',
+      'bmr': 'Grundumsatz',
+      'tdee': 'Gesamtumsatz',
       'calc_goal': 'Dein Ziel',
       'goal_maintain': 'Gewicht halten',
       'goal_deficit': 'Abnehmen (Defizit)',
@@ -174,6 +177,9 @@ class AppLocalizations {
       'activity_light': 'Light activity (1-3x workout/week)',
       'activity_moderate': 'Moderate activity (3-5x workout/week)',
       'activity_very': 'Very active (6-7x workout/week)',
+      'activity_extremely': 'Extremely active (hard manual labor / intense training)',
+      'bmr': 'BMR',
+      'tdee': 'TDEE',
       'calc_goal': 'Your Goal',
       'goal_maintain': 'Maintain weight',
       'goal_deficit': 'Lose weight (Deficit)',
@@ -270,6 +276,9 @@ class AppLocalizations {
   String get activityLight => t('activity_light');
   String get activityModerate => t('activity_moderate');
   String get activityVery => t('activity_very');
+  String get activityExtremely => t('activity_extremely');
+  String get bmr => t('bmr');
+  String get tdee => t('tdee');
   String get calcGoal => t('calc_goal');
   String get goalMaintain => t('goal_maintain');
   String get goalDeficit => t('goal_deficit');

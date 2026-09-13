@@ -92,6 +92,8 @@ class DailyProgress {
   final double remainingProteinG;
   final double proteinProgress;
 
+  final double targetCarbsG;
+  final double targetFatG;
   final double totalCarbsG;
   final double totalFatG;
   final int totalWaterMl;
@@ -105,6 +107,8 @@ class DailyProgress {
     required this.consumedProteinG,
     required this.remainingProteinG,
     required this.proteinProgress,
+    this.targetCarbsG = 250.0,
+    this.targetFatG = 70.0,
     this.totalCarbsG = 0.0,
     this.totalFatG = 0.0,
     this.totalWaterMl = 0,
@@ -151,6 +155,8 @@ final dailyProgressProvider = Provider<DailyProgress>((ref) {
     consumedProteinG: totalProtein,
     remainingProteinG: remainingProtein,
     proteinProgress: proteinRatio,
+    targetCarbsG: goals.targetCarbsG,
+    targetFatG: goals.targetFatG,
     totalCarbsG: totalCarbs,
     totalFatG: totalFat,
     totalWaterMl: totalWater,

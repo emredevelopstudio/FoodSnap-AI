@@ -32,6 +32,7 @@ void main() {
     expect(provider.startTime, isNull);
     expect(provider.targetFastingHours, 16);
     expect(provider.targetEatingHours, 8);
+    expect(provider.selectedPlan, FastingPlan.plan16_8);
     expect(provider.elapsed, Duration.zero);
     expect(provider.progress, 0.0);
     expect(provider.remaining, const Duration(hours: 16));
@@ -47,6 +48,7 @@ void main() {
     expect(provider.startTime, isNotNull);
     expect(provider.targetFastingHours, 18);
     expect(provider.targetEatingHours, 6);
+    expect(provider.selectedPlan, FastingPlan.plan18_6);
     expect(provider.targetDuration, const Duration(hours: 18));
 
     // Verify persistence in Hive
@@ -77,15 +79,57 @@ void main() {
     provider.dispose();
   });
 
-  test('FastingProvider changePlan updates hours and persists', () async {
+  test('FastingProvider changePlan updates hours, plan and persists', () async {
     final provider = FastingProvider();
     await provider.changePlan(14, 10);
     expect(provider.targetFastingHours, 14);
     expect(provider.targetEatingHours, 10);
+    expect(provider.selectedPlan, FastingPlan.plan14_10);
 
     final box = Hive.box(HiveService.fastingBoxName);
     expect(box.get(FastingProvider.targetFastingHoursKey), 14);
     expect(box.get(FastingProvider.targetEatingHoursKey), 10);
+    expect(box.get(FastingProvider.selectedPlanKey), FastingPlan.plan14_10.name);
+
+    provider.dispose();
+  });
+
+  test('FastingProvider selectPlan works for all preset plans and custom', () async {
+    final provider = FastingProvider();
+
+    await provider.selectPlan(FastingPlan.plan12_12);
+    expect(provider.targetFastingHours, 12);
+    expect(provider.targetEatingHours, 12);
+    expect(provider.selectedPlan, FastingPlan.plan12_12);
+
+    await provider.selectPlan(FastingPlan.plan20_4);
+    expect(provider.targetFastingHours, 20);
+    expect(provider.targetEatingHours, 4);
+    expect(provider.selectedPlan, FastingPlan.plan20_4);
+
+    await provider.selectPlan(FastingPlan.custom, customFastHours: 17);
+    expect(provider.targetFastingHours, 17);
+    expect(provider.targetEatingHours, 7);
+    expect(provider.selectedPlan, FastingPlan.custom);
+
+    provider.dispose();
+  });
+
+  test('FastingProvider updateWeight tracks current, target and start weights and calculates progress', () async {
+    final provider = FastingProvider();
+
+    await provider.updateWeight(80.0, 75.0, 85.0);
+    expect(provider.currentWeight, 80.0);
+    expect(provider.targetWeight, 75.0);
+    expect(provider.startWeight, 85.0);
+    expect(provider.weightDifference, 5.0);
+    expect(provider.weightProgress, 0.5); // 5kg of 10kg achieved
+
+    // Verify persistence in Hive
+    final box = Hive.box(HiveService.fastingBoxName);
+    expect(box.get(FastingProvider.currentWeightKey), 80.0);
+    expect(box.get(FastingProvider.targetWeightKey), 75.0);
+    expect(box.get(FastingProvider.startWeightKey), 85.0);
 
     provider.dispose();
   });
@@ -124,4 +168,3 @@ void main() {
     provider17.dispose();
   });
 }
-

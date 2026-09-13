@@ -268,7 +268,10 @@ class ProgressCard extends StatelessWidget {
                   child: _buildMacroSegment(
                     label: l10n.isEn ? 'Carbs' : 'Kohlenhydrate',
                     value: '${progress.totalCarbsG.toStringAsFixed(1)} g',
-                    ratio: (progress.totalCarbsG / 250.0).clamp(0.0, 1.0),
+                    ratio: (progress.targetCarbsG > 0
+                            ? progress.totalCarbsG / progress.targetCarbsG
+                            : 0.0)
+                        .clamp(0.0, 1.0),
                     trackColor: trackColor,
                     barColor: const Color(0xFF1E88E5),
                     textColor: textColor,
@@ -281,7 +284,10 @@ class ProgressCard extends StatelessWidget {
                   child: _buildMacroSegment(
                     label: l10n.fat,
                     value: '${progress.totalFatG.toStringAsFixed(1)} g',
-                    ratio: (progress.totalFatG / 70.0).clamp(0.0, 1.0),
+                    ratio: (progress.targetFatG > 0
+                            ? progress.totalFatG / progress.targetFatG
+                            : 0.0)
+                        .clamp(0.0, 1.0),
                     trackColor: trackColor,
                     barColor: const Color(0xFF1E88E5),
                     textColor: textColor,

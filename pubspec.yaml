@@ -1,7 +1,7 @@
 name: foodsnap_ai
 description: "FoodSnap AI - Cross-platform calorie & protein tracking app for Mobile and Desktop"
 publish_to: "none"
-version: 1.0.0+6
+version: 1.0.1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

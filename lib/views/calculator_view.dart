@@ -35,6 +35,10 @@ class _CalculatorViewState extends ConsumerState<CalculatorView> {
 
     _gender = profile.gender == 'w' ? 'w' : 'm';
     _activityLevel = profile.activityLevel;
+    const validActivities = ['sedentary', 'light', 'moderate', 'very_active', 'extremely_active'];
+    if (!validActivities.contains(_activityLevel)) {
+      _activityLevel = 'moderate';
+    }
     _goal = profile.goal;
   }
 
@@ -359,6 +363,13 @@ class _CalculatorViewState extends ConsumerState<CalculatorView> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      DropdownMenuItem(
+                        value: 'extremely_active',
+                        child: Text(
+                          l10n.activityExtremely,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) setState(() => _activityLevel = val);
@@ -429,16 +440,20 @@ class _CalculatorViewState extends ConsumerState<CalculatorView> {
                   children: [
                     if (isSelected) ...[
                       const Icon(Icons.check, size: 16, color: Colors.white),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                     ],
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : (isDark ? Colors.grey.shade300 : const Color(0xFF475569)),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark ? Colors.grey.shade300 : const Color(0xFF475569)),
+                        ),
                       ),
                     ),
                   ],
