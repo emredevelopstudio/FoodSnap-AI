@@ -47,3 +47,14 @@ app.*.map.json
 .env
 .env.*
 *.env
+!.env.example
+
+# Android Keystores & Signing
+*.jks
+*.keystore
+**/key.properties
+!**/key.properties.example
+
+# Google Services & Firebase
+google-services.json
+GoogleService-Info.plist
