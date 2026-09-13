@@ -19,6 +19,8 @@ import '../l10n/app_localizations.dart';
 import 'manual_entry_view.dart';
 import 'scan_review_view.dart';
 import 'settings_view.dart';
+import 'responsive_scaffold.dart';
+import '../providers/fasting_provider.dart';
 
 final _scanInProgressProvider = StateProvider<bool>((ref) => false);
 
@@ -499,6 +501,10 @@ class DashboardView extends ConsumerWidget {
                     meals: meals,
                     isDark: isDark,
                   ),
+                  const SizedBox(height: 10),
+
+                  // 2c. Intervallfasten-Karte
+                  _FastingDashboardCard(isDark: isDark),
                   const SizedBox(height: 22),
 
                   // 3. Section Title
@@ -1513,3 +1519,107 @@ class _CreatineTrackerCard extends ConsumerWidget {
     }
   }
 }
+
+class _FastingDashboardCard extends ConsumerWidget {
+  final bool isDark;
+
+  const _FastingDashboardCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fasting = ref.watch(fastingProvider);
+    final isActive = fasting.isFasting;
+
+    final cardBg = isActive
+        ? (isDark
+            ? const Color(0xFF78350F).withValues(alpha: 0.25)
+            : const Color(0xFFFFFBEB))
+        : (isDark ? const Color(0xFF1E1E1E) : Colors.white);
+
+    final borderColor = isActive
+        ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+        : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E8F0));
+
+    final title =
+        'Intervallfasten (${fasting.targetFastingHours}:${fasting.targetEatingHours})';
+    final subtitle = isActive
+        ? 'Läuft · ${fasting.elapsed.inHours}h ${fasting.elapsed.inMinutes.remainder(60)}m / ${fasting.targetFastingHours}h'
+        : 'Nicht aktiv · Tippe zum Starten';
+
+    return InkWell(
+      onTap: () {
+        ref.read(bottomNavIndexProvider.notifier).state = 2;
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: isActive ? 1.2 : 1),
+        ),
+        child: Row(
+          children: [
+            // Icon in Bernstein/Orange
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.hourglass_bottom_rounded,
+                color: Color(0xFFF59E0B),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Textblock
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.5,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isActive
+                          ? (isDark
+                              ? const Color(0xFFFBBF24)
+                              : const Color(0xFFD97706))
+                          : (isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B)),
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Trailing Chevron
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 22,
+              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

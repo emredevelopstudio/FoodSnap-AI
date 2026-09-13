@@ -2,22 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'calculator_view.dart';
 import 'dashboard_view.dart';
+import 'fasting_view.dart';
 import 'meals_history_view.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/app_banner_ad.dart';
 
-class ResponsiveScaffold extends ConsumerStatefulWidget {
+final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
+
+class ResponsiveScaffold extends ConsumerWidget {
   const ResponsiveScaffold({super.key});
 
   @override
-  ConsumerState<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
-}
-
-class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
-  int _currentIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(bottomNavIndexProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -30,13 +27,13 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             body: Row(
               children: [
                 NavigationRail(
-                  selectedIndex: _currentIndex,
+                  selectedIndex: currentIndex,
                   extended: constraints.maxWidth >= 1024,
                   minExtendedWidth: 200,
                   backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
                   indicatorColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFD9E2EC),
                   onDestinationSelected: (index) {
-                    setState(() => _currentIndex = index);
+                    ref.read(bottomNavIndexProvider.notifier).state = index;
                   },
                   leading: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -73,9 +70,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                       label: Text(context.l10n.dashboard),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.restaurant_menu_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      icon: Icon(Icons.restaurant_menu_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                       selectedIcon: Icon(Icons.restaurant_menu, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       label: Text(context.l10n.meals),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      selectedIcon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                      label: const Text('Fasten'),
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.calculate_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
@@ -86,14 +88,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 ),
                 const VerticalDivider(thickness: 1, width: 1),
                 Expanded(
-                  child: _buildBody(),
+                  child: _buildBody(currentIndex),
                 ),
               ],
             ),
           );
         } else {
           return Scaffold(
-            body: _buildBody(),
+            body: _buildBody(currentIndex),
             bottomNavigationBar: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -108,13 +110,13 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                     ),
                   ),
                   child: NavigationBar(
-                    selectedIndex: _currentIndex,
+                    selectedIndex: currentIndex,
                     backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
                     indicatorColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFD9E2EC),
                     elevation: 0,
                     height: 68,
                     onDestinationSelected: (index) {
-                      setState(() => _currentIndex = index);
+                      ref.read(bottomNavIndexProvider.notifier).state = index;
                     },
                     destinations: [
                       NavigationDestination(
@@ -123,9 +125,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                         label: context.l10n.dashboard,
                       ),
                       NavigationDestination(
-                        icon: Icon(Icons.restaurant_menu_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        icon: Icon(Icons.restaurant_menu_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                         selectedIcon: Icon(Icons.restaurant_menu, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                         label: context.l10n.meals,
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        selectedIcon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        label: 'Fasten',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.calculate_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
@@ -143,13 +150,15 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     );
   }
 
-  Widget _buildBody() {
-    switch (_currentIndex) {
+  Widget _buildBody(int currentIndex) {
+    switch (currentIndex) {
       case 0:
         return const DashboardView();
       case 1:
         return const MealsHistoryView();
       case 2:
+        return const FastingView();
+      case 3:
         return const CalculatorView();
       default:
         return const DashboardView();

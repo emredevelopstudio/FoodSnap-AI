@@ -15,6 +15,7 @@ class HiveService {
   static const String isDarkModeKey = 'is_dark_mode';
   static const String localeKey = 'app_locale';
   static const String creatineWaterKey = 'creatine_water_ml';
+  static const String fastingBoxName = 'fasting_box';
 
   static Future<void> init() async {
     if (!Hive.isAdapterRegistered(0)) {
@@ -25,6 +26,9 @@ class HiveService {
     }
     if (!Hive.isBoxOpen(settingsBoxName)) {
       await Hive.openBox<Map>(settingsBoxName);
+    }
+    if (!Hive.isBoxOpen(fastingBoxName)) {
+      await Hive.openBox(fastingBoxName);
     }
   }
 
