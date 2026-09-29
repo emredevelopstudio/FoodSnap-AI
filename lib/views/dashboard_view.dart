@@ -1,4 +1,5 @@
 // ignore_for_file: avoid_print
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,10 +10,9 @@ import '../models/meal_entry.dart';
 import '../providers/meal_provider.dart';
 import '../services/hive_service.dart';
 import '../services/image_storage_service.dart';
-import '../services/image_mime_type.dart';
 import '../services/purchase_service.dart';
-import '../services/gemini_service.dart';
 import '../widgets/pro_upgrade_sheet.dart';
+import '../widgets/privacy_consent_dialog.dart';
 import '../widgets/meal_card.dart';
 import '../widgets/progress_card.dart';
 import '../l10n/app_localizations.dart';
@@ -32,8 +32,6 @@ class DashboardView extends ConsumerWidget {
     final scanInProgress = ref.read(_scanInProgressProvider.notifier);
     if (scanInProgress.state) return;
     scanInProgress.state = true;
-    final statusNotifier =
-        ValueNotifier<String>('Lebensmittel & Nährwerte werden berechnet');
     DialogRoute<void>? loadingRoute;
     NavigatorState? loadingNavigator;
     void closeLoadingDialog() {
@@ -45,6 +43,14 @@ class DashboardView extends ConsumerWidget {
     }
 
     try {
+      if (!HiveService.hasAcceptedPrivacy()) {
+        final accepted = await PrivacyConsentDialog.show(context);
+        if (!accepted) {
+          return;
+        }
+      }
+      if (!context.mounted) return;
+
       if (!PurchaseService.isProUser && !HiveService.hasFreeScansRemaining()) {
         await ProUpgradeSheet.show(
           context,
@@ -56,20 +62,19 @@ class DashboardView extends ConsumerWidget {
       final picker = ImagePicker();
       final image = await picker.pickImage(
         source: source,
-        maxWidth: 720,
-        maxHeight: 720,
-        imageQuality: 70,
+        preferredCameraDevice: CameraDevice.rear,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
       );
       if (image == null) return;
 
-      print("DEBUG: Bild ausgewählt: ${image.path}");
-
-      final imageBytes = await image.readAsBytes();
-      final mimeType = detectImageMimeType(imageBytes, filePath: image.path);
+      debugPrint("DEBUG: Bild ausgewählt: ${image.path}");
 
       if (!context.mounted) return;
 
-      final visionService = ref.read(geminiVisionServiceProvider);
+      final geminiVisionService = ref.read(geminiVisionServiceProvider);
+
       if (!PurchaseService.isProUser && !HiveService.hasFreeScansRemaining()) {
         if (!context.mounted) return;
         await ProUpgradeSheet.show(
@@ -84,33 +89,25 @@ class DashboardView extends ConsumerWidget {
       loadingRoute = DialogRoute<void>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => PopScope(
+        builder: (ctx) => const PopScope(
           canPop: false,
           child: Center(
             child: Card(
-              margin: const EdgeInsets.all(24),
+              margin: EdgeInsets.all(24),
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Analysiere Bild...',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    CircularProgressIndicator(
+                      color: Color(0xFF10B981),
                     ),
-                    const SizedBox(height: 6),
-                    ValueListenableBuilder<String>(
-                      valueListenable: statusNotifier,
-                      builder: (ctx, status, _) => Text(
-                        status,
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
+                    SizedBox(height: 18),
+                    Text(
+                      'Foto wird gescannt...',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                   ],
                 ),
@@ -121,15 +118,9 @@ class DashboardView extends ConsumerWidget {
       );
       loadingNavigator.push(loadingRoute!);
 
-      final analysisFuture = visionService.analyzeFoodImage(
-        imageBytes: imageBytes,
-        mimeType: mimeType,
-        onStatusUpdate: (newStatus) {
-          statusNotifier.value = newStatus;
-        },
-      );
+      final analysisFuture = geminiVisionService.analyzeMeal(image.path);
 
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         analysisFuture,
         ImageStorageService.saveImagePermanently(image.path),
       ]);
@@ -137,13 +128,15 @@ class DashboardView extends ConsumerWidget {
       final meal = results[0] as MealEntry;
       final localImagePath = results[1] as String;
 
+      if (!context.mounted) return;
+      closeLoadingDialog();
+
       // Jeder erfolgreiche Scan erhöht den Zähler um 1 (nur bei Nicht-Pro-Nutzern)
       if (!PurchaseService.isProUser) {
         await HiveService.incrementDailyScansCount();
       }
 
       if (!context.mounted) return;
-      closeLoadingDialog();
 
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -153,50 +146,56 @@ class DashboardView extends ConsumerWidget {
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!context.mounted) return;
       closeLoadingDialog();
 
-      debugPrint('SCAN_ERROR UI: $e');
+      debugPrint('[SCAN PIPELINE ERROR]: $e');
+      debugPrint('[SCAN STACKTRACE]: $stackTrace');
+
       final String errorText;
-      if (e is ScanRateLimitException) {
-        errorText = e.toString();
-      } else if (GeminiVisionService.isRateLimitError(e)) {
-        errorText = ScanRateLimitException.message;
-      } else if (e is ScanAnalysisException) {
-        errorText = e.toString();
-      } else if (e is FormatException) {
+      if (e is FormatException) {
+        errorText = e.message;
+      } else if (e is FileSystemException) {
         errorText = e.message;
       } else {
         final raw = e.toString().replaceFirst('Exception: ', '').trim();
-        final lower = raw.toLowerCase();
-        if (lower.contains('api') ||
-            lower.contains('generative') ||
-            lower.contains('socket') ||
-            lower.contains('http') ||
-            lower.contains('client') ||
-            lower.contains('server') ||
-            lower.contains('longer available') ||
-            lower.contains('status code') ||
-            lower.contains('failed')) {
-          errorText = 'Fehler bei der Analyse. Bitte versuche es erneut.';
-        } else {
-          errorText = raw.isNotEmpty
-              ? raw
-              : 'Fehler bei der Analyse. Bitte versuche es erneut.';
-        }
+        errorText = raw.isNotEmpty
+            ? raw
+            : 'Fehler beim Scannen der Mahlzeit. Bitte versuche es erneut.';
       }
 
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorText),
-          backgroundColor: Colors.redAccent,
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  color: Colors.white, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  errorText,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
     } finally {
       closeLoadingDialog();
-      statusNotifier.dispose();
       scanInProgress.state = false;
     }
   }
@@ -612,7 +611,7 @@ class DashboardView extends ConsumerWidget {
             borderRadius: BorderRadius.circular(14),
             child: Container(
               height: 54,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: btnBg,
                 borderRadius: BorderRadius.circular(14),
@@ -627,12 +626,16 @@ class DashboardView extends ConsumerWidget {
                     color: iconColor,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    context.l10n.scanMeal,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
+                  Flexible(
+                    child: Text(
+                      context.l10n.scanMeal,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
                     ),
                   ),
                 ],

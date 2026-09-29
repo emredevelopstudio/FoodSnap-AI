@@ -1,7 +1,7 @@
 name: foodsnap_ai
 description: "FoodSnap AI - Cross-platform calorie & protein tracking app for Mobile and Desktop"
 publish_to: "none"
-version: 1.0.1
+version: 1.0.1+9
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -12,7 +12,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.5.1
-  google_generative_ai: ^0.4.6
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   image: ^4.2.0
@@ -22,9 +21,11 @@ dependencies:
   path_provider: ^2.1.3
   purchases_flutter: ^10.12.0
   google_mobile_ads: ^9.1.0
-  flutter_dotenv: ^5.2.1
   mobile_scanner: ^5.2.3
   http: ^1.2.2
+  url_launcher: ^6.3.2
+  google_mlkit_text_recognition: ^0.13.0
+  google_generative_ai: ^0.4.6
 
 dev_dependencies:
   flutter_test:
@@ -36,7 +37,11 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/
-    - .env
+    # Nur tatsächlich geladene Modelle einzeln listen (kein Ordner-Wildcard,
+    # sonst landen Duplikate/README im Bundle). Kein .env mehr!
+    - assets/models/food_classifier_quant.tflite
+    - assets/models/food_labels.txt
+    - assets/models/nutrition_db.json
 
 flutter_launcher_icons:
   android: "launcher_icon"

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../providers/meal_provider.dart';
 import '../services/barcode_nutrition_service.dart';
 import '../views/manual_entry_view.dart';
 import '../views/scan_review_view.dart';
+import '../core/logging/app_log.dart';
 
 class BarcodeScannerScreen extends ConsumerStatefulWidget {
   const BarcodeScannerScreen({super.key});
@@ -42,7 +42,8 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
     // 1. Controller sofort stoppen beim ersten Treffer
     try {
       await _controller.stop();
-    } catch (_) {
+    } catch (e) {
+      AppLog.w('BarcodeScanner', 'Controller-Stop fehlgeschlagen', e);
       // Ignoriere Controller-Stop-Fehler
     }
 
@@ -55,10 +56,8 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
     });
 
     try {
-      final geminiService = ref.read(geminiVisionServiceProvider);
       final productData = await BarcodeNutritionService.fetchProductByBarcode(
         rawCode,
-        geminiService: geminiService,
       );
 
       if (!mounted) return;
@@ -93,7 +92,9 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
 
         try {
           await _controller.start();
-        } catch (_) {}
+        } catch (e, st) {
+          AppLog.e('BarcodeScanner', 'Kamera-Neustart fehlgeschlagen', e, st);
+        }
       }
     }
   }
@@ -146,7 +147,9 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
                 setState(() {
                   _isTorchOn = !_isTorchOn;
                 });
-              } catch (_) {}
+              } catch (e) {
+                AppLog.w('BarcodeScanner', 'Taschenlampe nicht verfügbar', e);
+              }
             },
           ),
         ],

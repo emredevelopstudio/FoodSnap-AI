@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:foodsnap_ai/services/hive_service.dart';
-import 'package:foodsnap_ai/services/gemini_service.dart';
 
 void main() {
   late Directory directory;
@@ -52,18 +51,6 @@ void main() {
     expect(await HiveService.tryConsumeDailyScan(today), isFalse);
   });
 
-  test('quota error variants map to the friendly message', () {
-    for (final message in [
-      'HTTP 429', 'RESOURCE_EXHAUSTED', 'ResourceExhausted',
-      'Quota exceeded for metric', 'You exceeded your current quota',
-      'Rate limit exceeded', 'Too many requests',
-    ]) {
-      expect(GeminiVisionService.isRateLimitError(Exception(message)), isTrue);
-    }
-    expect(GeminiVisionService.isRateLimitError(Exception('Invalid API key')), isFalse);
-    expect(ScanRateLimitException().toString(),
-        'Die Bilderkennung ist gerade kurz ausgelastet. Bitte versuche es in wenigen Sekunden erneut.');
-  });
 
   test('daily scans count tracks daily limit of 5 scans and resets on next day', () async {
     final today = DateTime(2026, 9, 12);

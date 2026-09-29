@@ -4,9 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/meal_entry.dart';
 import '../models/daily_goals.dart';
 import '../models/user_profile.dart';
+import '../core/logging/app_log.dart';
 import 'image_storage_service.dart';
 
 class HiveService {
+  static const String _tag = 'HiveService';
   static const String mealBoxName = 'meals_box';
   static const String settingsBoxName = 'nutritrack_settings';
   static const String goalsKey = 'daily_goals';
@@ -16,17 +18,30 @@ class HiveService {
   static const String localeKey = 'app_locale';
   static const String creatineWaterKey = 'creatine_water_ml';
   static const String fastingBoxName = 'fasting_box';
+  static const String purchasesBoxName = 'purchases';
+  static const String dailyScansBoxName = 'daily_scans';
 
   static Future<void> init() async {
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(MealEntryAdapter());
     }
-    if (!Hive.isBoxOpen(mealBoxName)) {
-      await Hive.openBox<MealEntry>(mealBoxName);
-    }
+    // 1. settings box
     if (!Hive.isBoxOpen(settingsBoxName)) {
       await Hive.openBox<Map>(settingsBoxName);
     }
+    // 2. meals box
+    if (!Hive.isBoxOpen(mealBoxName)) {
+      await Hive.openBox<MealEntry>(mealBoxName);
+    }
+    // 3. purchases box
+    if (!Hive.isBoxOpen(purchasesBoxName)) {
+      await Hive.openBox(purchasesBoxName);
+    }
+    // 4. daily_scans box
+    if (!Hive.isBoxOpen(dailyScansBoxName)) {
+      await Hive.openBox(dailyScansBoxName);
+    }
+    // 5. fasting box
     if (!Hive.isBoxOpen(fastingBoxName)) {
       await Hive.openBox(fastingBoxName);
     }
@@ -66,9 +81,14 @@ class HiveService {
   }
 
   static DailyGoals getDailyGoals() {
-    final raw = _settingsBox.get(goalsKey);
-    if (raw != null) {
-      return DailyGoals.fromMap(Map<String, dynamic>.from(raw));
+    if (!Hive.isBoxOpen(settingsBoxName)) return const DailyGoals();
+    try {
+      final raw = _settingsBox.get(goalsKey);
+      if (raw != null) {
+        return DailyGoals.fromMap(Map<String, dynamic>.from(raw));
+      }
+    } catch (e, st) {
+      AppLog.e(_tag, 'Tagesziele nicht lesbar, nutze Defaults', e, st);
     }
     return const DailyGoals();
   }
@@ -78,9 +98,14 @@ class HiveService {
   }
 
   static UserProfile getUserProfile() {
-    final raw = _settingsBox.get(profileKey);
-    if (raw != null) {
-      return UserProfile.fromMap(Map<String, dynamic>.from(raw));
+    if (!Hive.isBoxOpen(settingsBoxName)) return const UserProfile();
+    try {
+      final raw = _settingsBox.get(profileKey);
+      if (raw != null) {
+        return UserProfile.fromMap(Map<String, dynamic>.from(raw));
+      }
+    } catch (e, st) {
+      AppLog.e(_tag, 'Profil nicht lesbar, nutze Defaults', e, st);
     }
     return const UserProfile();
   }
@@ -107,7 +132,8 @@ class HiveService {
           WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
       setDarkMode(systemIsDark);
       return systemIsDark;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e(_tag, 'Theme-Modus nicht lesbar', e, st);
       return true; // Sicherer Fallback (Dark Theme)
     }
   }
@@ -172,11 +198,38 @@ class HiveService {
   }
 
   static const String isProUserKey = 'is_pro_user';
+  static const String privacyAcceptedKey = 'has_accepted_privacy_v1';
+
+  static bool hasAcceptedPrivacy() {
+    if (!Hive.isBoxOpen(settingsBoxName)) return false;
+    try {
+      final raw = _settingsBox.get(privacyAcceptedKey);
+      if (raw != null && raw['accepted'] != null) {
+        return raw['accepted'] == true;
+      }
+    } catch (e, st) {
+      AppLog.e(_tag, 'Datenschutz-Status nicht lesbar', e, st);
+    }
+    return false;
+  }
+
+  static Future<void> setPrivacyAccepted(bool accepted) async {
+    await _settingsBox.put(privacyAcceptedKey, {
+      'accepted': accepted,
+      'value': accepted,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
 
   static bool getIsProUser() {
-    final raw = _settingsBox.get(isProUserKey);
-    if (raw != null && raw['is_pro'] != null) {
-      return raw['is_pro'] == true;
+    if (!Hive.isBoxOpen(settingsBoxName)) return false;
+    try {
+      final raw = _settingsBox.get(isProUserKey);
+      if (raw != null && raw['is_pro'] != null) {
+        return raw['is_pro'] == true;
+      }
+    } catch (e, st) {
+      AppLog.e(_tag, 'Pro-Status nicht lesbar', e, st);
     }
     return false;
   }
@@ -194,19 +247,29 @@ class HiveService {
 
   /// Synchronisiert das Datum und setzt bei Datumswechsel den Zähler auf 0 zurück
   static void _checkAndResetDailyCounter([DateTime? date]) {
-    final todayStr = _formatIsoDate(date ?? DateTime.now());
-    final savedDate = _settingsBox.get(dailyScanDateKey)?['date'] as String?;
-    if (savedDate != todayStr) {
-      _settingsBox.put(dailyScanDateKey, {'date': todayStr});
-      _settingsBox.put(dailyScansCountKey, {'count': 0});
+    if (!Hive.isBoxOpen(settingsBoxName)) return;
+    try {
+      final todayStr = _formatIsoDate(date ?? DateTime.now());
+      final savedDate = _settingsBox.get(dailyScanDateKey)?['date'] as String?;
+      if (savedDate != todayStr) {
+        _settingsBox.put(dailyScanDateKey, {'date': todayStr});
+        _settingsBox.put(dailyScansCountKey, {'count': 0});
+      }
+    } catch (e, st) {
+      AppLog.e(_tag, 'Scan-Zähler-Reset fehlgeschlagen', e, st);
     }
   }
 
   static int getDailyScansCount([DateTime? date]) {
+    if (!Hive.isBoxOpen(settingsBoxName)) return 0;
     _checkAndResetDailyCounter(date);
-    final raw = _settingsBox.get(dailyScansCountKey);
-    if (raw != null && raw['count'] != null) {
-      return (raw['count'] as num).toInt();
+    try {
+      final raw = _settingsBox.get(dailyScansCountKey);
+      if (raw != null && raw['count'] != null) {
+        return (raw['count'] as num).toInt();
+      }
+    } catch (e, st) {
+      AppLog.e(_tag, 'Scan-Zähler nicht lesbar', e, st);
     }
     return 0;
   }
@@ -324,7 +387,8 @@ class HiveService {
         }
       }
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e(_tag, 'Backup-Import fehlgeschlagen', e, st);
       return false;
     }
   }

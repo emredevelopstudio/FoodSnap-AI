@@ -9,6 +9,7 @@ import '../providers/theme_provider.dart';
 import '../providers/meal_provider.dart';
 import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
+import '../widgets/privacy_consent_dialog.dart';
 
 class SettingsView extends ConsumerStatefulWidget {
   const SettingsView({super.key});
@@ -556,6 +557,101 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                     subtitle: const Text(
                       'FoodSnap AI v1.0.0',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Sektion 4: Rechtliches & Datenschutz
+          _buildSectionHeader('Rechtliches & Datenschutz', titleColor),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF2563EB)),
+                    ),
+                    title: const Text(
+                      'Datenschutzerklärung',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    subtitle: const Text(
+                      'Informationen zur Datenverarbeitung & KI-Nutzung',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.open_in_new_rounded, size: 18, color: Colors.grey),
+                    onTap: () => PrivacyConsentDialog.openPrivacyPolicy(context),
+                  ),
+                  Divider(height: 1, color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF1F5F9)),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (HiveService.hasAcceptedPrivacy()
+                                ? const Color(0xFF10B981)
+                                : Colors.orange)
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        HiveService.hasAcceptedPrivacy()
+                            ? Icons.check_circle_outline
+                            : Icons.gpp_maybe_outlined,
+                        color: HiveService.hasAcceptedPrivacy()
+                            ? const Color(0xFF10B981)
+                            : Colors.orange,
+                      ),
+                    ),
+                    title: const Text(
+                      'KI-Einwilligung',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    subtitle: Text(
+                      HiveService.hasAcceptedPrivacy()
+                          ? 'Zugestimmt (Kamera- & KI-Analyse aktiv)'
+                          : 'Abgelehnt (KI-Scan deaktiviert)',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                    trailing: TextButton(
+                      onPressed: () async {
+                        await PrivacyConsentDialog.show(context);
+                        setState(() {});
+                      },
+                      child: Text(
+                        HiveService.hasAcceptedPrivacy()
+                            ? 'Details'
+                            : 'Zustimmen',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: HiveService.hasAcceptedPrivacy()
+                              ? const Color(0xFF2563EB)
+                              : Colors.orange.shade800,
+                        ),
+                      ),
                     ),
                   ),
                 ],

@@ -7,13 +7,31 @@ import 'meals_history_view.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/app_banner_ad.dart';
 
+import '../services/hive_service.dart';
+import '../widgets/privacy_consent_dialog.dart';
+
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
-class ResponsiveScaffold extends ConsumerWidget {
+class ResponsiveScaffold extends ConsumerStatefulWidget {
   const ResponsiveScaffold({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
+}
+
+class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !HiveService.hasAcceptedPrivacy()) {
+        PrivacyConsentDialog.show(context);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;

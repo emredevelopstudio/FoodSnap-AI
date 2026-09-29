@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../core/logging/app_log.dart';
 
 class ImageStorageService {
   /// Liefert das persistente Verzeichnis für Mahlzeiten-Bilder im Anwendungs-Dokumentenverzeichnis
@@ -35,7 +36,9 @@ class ImageStorageService {
     if (await file.exists()) {
       try {
         await file.delete();
-      } catch (_) {}
+      } on FileSystemException catch (e) {
+        AppLog.w('ImageStorage', 'Bild konnte nicht gelöscht werden', e);
+      }
     }
   }
 }

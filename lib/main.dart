@@ -10,28 +10,43 @@ import 'services/hive_service.dart';
 import 'services/purchase_service.dart';
 import 'services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'core/logging/app_log.dart';
 import 'views/responsive_scaffold.dart';
 
 void main() async {
+  // 1. Flutter Binding als allererste Zeile initialisieren
   WidgetsFlutterBinding.ensureInitialized();
-  await MobileAds.instance.initialize();
-  await AdService.init();
-  await initializeDateFormatting('de_DE', null);
-  await Hive.initFlutter();
-  await HiveService.init();
+  AppLog.silenceInRelease();
 
-  // RevenueCat Service vor App-Start initialisieren
-  await PurchaseService.init();
-
+  // 2. Hive initialisieren & alle benötigten Boxen (settings, meals, purchases, daily_scans) VOR allen Services öffnen
   try {
-    await dotenv.load(fileName: ".env");
-    // ignore: avoid_print
-    print('>>> CHECK KEY: ${dotenv.env['GEMINI_API_KEY'] != null ? "KEY VORHANDEN" : "KEY IST NULL/LEER"}');
+    await Hive.initFlutter();
+    await HiveService.init();
+    debugPrint('[Hive] Erfolgreich initialisiert und alle Boxen geöffnet.');
+  } catch (e, stack) {
+    debugPrint('[Hive] Schwerer Fehler bei der Hive-Initialisierung: $e\n$stack');
+  }
+
+  // 3. Datumsformatierung initialisieren
+  try {
+    await initializeDateFormatting('de_DE', null);
   } catch (e) {
-    // ignore: avoid_print
-    print('>>> CHECK KEY: KEY IST NULL/LEER ($e)');
-    debugPrint('Hinweis: .env nicht geladen ($e). API-Keys können via --dart-define bereitgestellt werden.');
+    debugPrint('Hinweis: DateFormatting nicht initialisiert ($e).');
+  }
+
+  // 4. RevenueCat Service vor App-Start initialisieren (erst nach vollständigem Hive-Start)
+  try {
+    await PurchaseService.init();
+  } catch (e) {
+    debugPrint('[PurchaseService] Start-Initialisierung übersprungen/Fehler: $e');
+  }
+
+  // 6. MobileAds & AdService sicher in try-catch initialisieren (Werbefehler blockieren/crashen den App-Start nicht)
+  try {
+    await MobileAds.instance.initialize();
+    await AdService.init();
+  } catch (e) {
+    debugPrint('[AdMob] Initialisierungsfehler bei MobileAds/AdService: $e');
   }
 
   runApp(

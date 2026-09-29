@@ -1,4 +1,3 @@
-// ignore_for_file: avoid_print
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -7,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../models/meal_item.dart';
-import 'gemini_service.dart';
 
 class BarcodeNetworkException implements Exception {
   final String message;
@@ -21,11 +19,9 @@ class BarcodeNutritionService {
   static const String _baseUrl = 'https://world.openfoodfacts.org/api/v2/product';
 
   /// Ruft Produktinformationen und Nährwerte über die Open Food Facts API ab.
-  /// Nutzt robustes Fallback-Parsing und bei leeren Nährwerten einen KI-Fallback via Gemini.
   static Future<Map<String, dynamic>?> fetchProductByBarcode(
-    String barcode, {
-    GeminiVisionService? geminiService,
-  }) async {
+    String barcode,
+  ) async {
     final cleanCode = barcode.trim();
     if (cleanCode.length < 8 || !RegExp(r'^\d+$').hasMatch(cleanCode)) {
       debugPrint(
@@ -47,108 +43,32 @@ class BarcodeNutritionService {
         },
       ).timeout(const Duration(seconds: 8));
     } on SocketException catch (e) {
-      print('>>> [OFF SOCKET ERROR] Keine Verbindung / DNS-Fehler: $e');
+      debugPrint('>>> [OFF SOCKET ERROR] Keine Verbindung / DNS-Fehler: $e');
       networkOrTimeoutError = true;
     } on TimeoutException catch (e) {
-      print('>>> [OFF TIMEOUT ERROR] Echtes Timeout nach 8s: $e');
+      debugPrint('>>> [OFF TIMEOUT ERROR] Echtes Timeout nach 8s: $e');
       networkOrTimeoutError = true;
     } catch (e, stack) {
-      print('>>> [OFF UNKNOWN ERROR] $e');
-      print('>>> [OFF STACK] $stack');
+      debugPrint('>>> [OFF UNKNOWN ERROR] $e');
+      debugPrint('>>> [OFF STACK] $stack');
       networkOrTimeoutError = true;
     }
 
     // Wenn echter Netzwerkfehler / Timeout
     if (networkOrTimeoutError || response == null) {
-      debugPrint(
-          '>>> [BARCODE SERVICE] OFF nicht erreichbar -> Prüfe Gemini-Fallback für Barcode $cleanCode...');
-      try {
-        GeminiVisionService? ai = geminiService;
-        if (ai == null && GeminiVisionService.defaultApiKey.isNotEmpty) {
-          ai = GeminiVisionService();
-        }
-
-        if (ai != null) {
-          final aiResult = await ai
-              .estimateProductByBarcode(cleanCode)
-              .timeout(const Duration(seconds: 5));
-
-          if (aiResult != null &&
-              aiResult['name'] != null &&
-              aiResult['name'] != 'Unbekannt') {
-            final name = aiResult['name'].toString();
-            final calories = (aiResult['calories'] as num?)?.toDouble() ?? 0.0;
-            final protein = (aiResult['protein'] as num?)?.toDouble() ?? 0.0;
-            final carbs = (aiResult['carbs'] as num?)?.toDouble() ?? 0.0;
-            final fat = (aiResult['fat'] as num?)?.toDouble() ?? 0.0;
-
-            debugPrint(
-                '>>> [BARCODE AI FALLBACK] Barcode erfolgreich per Gemini aufgelöst: $name ($calories kcal)');
-            return {
-              'name': name,
-              'calories': calories.round(),
-              'protein': double.parse(protein.toStringAsFixed(1)),
-              'carbs': double.parse(carbs.toStringAsFixed(1)),
-              'fat': double.parse(fat.toStringAsFixed(1)),
-              'fiber': 0.0,
-              'unit': 'g',
-              'defaultAmount': 100.0,
-              'barcode': cleanCode,
-              'isAiEstimated': true,
-            };
-          }
-        }
-      } catch (aiError) {
-        debugPrint(
-            '>>> [BARCODE AI FALLBACK] Fehler beim Gemini-Barcode-Fallback: $aiError');
-      }
-
       throw const BarcodeNetworkException(
           'Netzwerk zu langsam, bitte manuell eingeben');
     }
 
     // 404: Produkt nicht in Datenbank gefunden (KEIN Netzwerkfehler!)
     if (response.statusCode == 404) {
-      print(
+      debugPrint(
           '>>> [OFF 404] Produkt für Barcode $cleanCode nicht in Open Food Facts gefunden (HTTP 404)');
-      // Optionaler Versuch über Gemini
-      try {
-        GeminiVisionService? ai = geminiService;
-        if (ai == null && GeminiVisionService.defaultApiKey.isNotEmpty) {
-          ai = GeminiVisionService();
-        }
-        if (ai != null) {
-          final aiResult = await ai
-              .estimateProductByBarcode(cleanCode)
-              .timeout(const Duration(seconds: 5));
-          if (aiResult != null &&
-              aiResult['name'] != null &&
-              aiResult['name'] != 'Unbekannt') {
-            final name = aiResult['name'].toString();
-            final calories = (aiResult['calories'] as num?)?.toDouble() ?? 0.0;
-            final protein = (aiResult['protein'] as num?)?.toDouble() ?? 0.0;
-            final carbs = (aiResult['carbs'] as num?)?.toDouble() ?? 0.0;
-            final fat = (aiResult['fat'] as num?)?.toDouble() ?? 0.0;
-            return {
-              'name': name,
-              'calories': calories.round(),
-              'protein': double.parse(protein.toStringAsFixed(1)),
-              'carbs': double.parse(carbs.toStringAsFixed(1)),
-              'fat': double.parse(fat.toStringAsFixed(1)),
-              'fiber': 0.0,
-              'unit': 'g',
-              'defaultAmount': 100.0,
-              'barcode': cleanCode,
-              'isAiEstimated': true,
-            };
-          }
-        }
-      } catch (_) {}
       return null;
     }
 
     if (response.statusCode != 200) {
-      print(
+      debugPrint(
           '>>> [OFF ERROR] Unerwarteter HTTP-Status ${response.statusCode} für Barcode $cleanCode');
       return null;
     }
@@ -263,44 +183,7 @@ class BarcodeNutritionService {
         defaultAmount = parsedAmount;
       }
 
-      bool isAiEstimated = false;
-
-      // 8. Intelligenter KI-Fallback via Gemini:
-      // Wenn alle Makros 0 sind oder fehlen (und es kein Wasser ist)
-      final bool allMacrosZero =
-          calories <= 0 && protein <= 0 && carbs <= 0 && fat <= 0;
-      final bool isWater = name.toLowerCase().contains('wasser') ||
-          name.toLowerCase().contains('water');
-
-      if (allMacrosZero && !isWater) {
-        debugPrint('>>> [BARCODE AI FALLBACK] Alle Makros sind 0 für "$name" -> Starte Gemini-KI-Fallback...');
-        try {
-          GeminiVisionService? ai = geminiService;
-          if (ai == null && GeminiVisionService.defaultApiKey.isNotEmpty) {
-            ai = GeminiVisionService();
-          }
-
-          if (ai != null) {
-            final aiMacros = await ai
-                .estimateProductNutrition(name)
-                .timeout(const Duration(seconds: 5));
-            if (aiMacros != null &&
-                ((aiMacros['calories'] ?? 0) > 0 ||
-                    (aiMacros['protein'] ?? 0) > 0 ||
-                    (aiMacros['carbs'] ?? 0) > 0 ||
-                    (aiMacros['fat'] ?? 0) > 0)) {
-              calories = _parseValue(aiMacros['calories']);
-              protein = _parseValue(aiMacros['protein']);
-              carbs = _parseValue(aiMacros['carbs']);
-              fat = _parseValue(aiMacros['fat']);
-              isAiEstimated = true;
-              debugPrint('>>> [BARCODE AI FALLBACK] Gemini-Schätzung erfolgreich: ${calories.round()} kcal, P: $protein, C: $carbs, F: $fat');
-            }
-          }
-        } catch (e) {
-          debugPrint('>>> [BARCODE AI FALLBACK] Fehler beim Gemini-Fallback: $e');
-        }
-      }
+      final bool isAiEstimated = false;
 
       return {
         'name': name,
@@ -316,7 +199,7 @@ class BarcodeNutritionService {
       };
     } catch (e, st) {
       debugPrint('[BarcodeService] Error parsing barcode $cleanCode: $e\n$st');
-      print('>>> [OFF ERROR] $e');
+      debugPrint('>>> [OFF ERROR] $e');
       return null;
     }
   }

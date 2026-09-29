@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../core/logging/app_log.dart';
 import 'hive_service.dart';
 
 /// StateNotifier für reaktive UI-Aktualisierung bei Kauf oder Wiederherstellung
@@ -101,69 +103,89 @@ class PurchaseService {
       debugPrint('[PurchaseService] Pro-Status aus lokalem Speicher (Hive) geladen: aktiv');
     }
 
-    await Purchases.setLogLevel(kDebugMode ? LogLevel.debug : LogLevel.info);
+    try {
+      await Purchases.setLogLevel(kDebugMode ? LogLevel.debug : LogLevel.info);
 
-    PurchasesConfiguration configuration;
-    if (Platform.isAndroid) {
-      configuration = PurchasesConfiguration(_googleApiKey);
-    } else if (Platform.isIOS) {
-      configuration = PurchasesConfiguration(_appleApiKey);
-    } else {
-      return;
-    }
+      PurchasesConfiguration configuration;
+      if (Platform.isAndroid) {
+        configuration = PurchasesConfiguration(_googleApiKey);
+      } else if (Platform.isIOS) {
+        configuration = PurchasesConfiguration(_appleApiKey);
+      } else {
+        return;
+      }
 
-    await Purchases.configure(configuration);
-    debugPrint('[PurchaseService] Purchases SDK erfolgreich konfiguriert.');
+      await Purchases.configure(configuration);
+      debugPrint('[PurchaseService] Purchases SDK erfolgreich konfiguriert.');
 
-    // 2. Purchase Stream / CustomerInfo Update Listener (fängt z. B. 'Tippen & Kaufen' sauber ab)
-    Purchases.addCustomerInfoUpdateListener((customerInfo) async {
-      debugPrint('[PurchaseService] CustomerInfo Update empfangen: '
-          'allPurchased=${customerInfo.allPurchasedProductIdentifiers}, '
-          'activeEntitlements=${customerInfo.entitlements.active.keys}, '
-          'nonSubTransactions=${customerInfo.nonSubscriptionTransactions.map((t) => t.productIdentifier).toList()}');
+      // 2. Purchase Stream / CustomerInfo Update Listener (fängt z. B. 'Tippen & Kaufen' sauber ab)
+      Purchases.addCustomerInfoUpdateListener((customerInfo) async {
+        try {
+          debugPrint('[PurchaseService] CustomerInfo Update empfangen: '
+              'allPurchased=${customerInfo.allPurchasedProductIdentifiers}, '
+              'activeEntitlements=${customerInfo.entitlements.active.keys}, '
+              'nonSubTransactions=${customerInfo.nonSubscriptionTransactions.map((t) => t.productIdentifier).toList()}');
 
-      final isSubbed = checkCustomerInfoIsPro(customerInfo) ||
-          customerInfo.allPurchasedProductIdentifiers.contains(productId) ||
-          customerInfo.allPurchasedProductIdentifiers.isNotEmpty;
+          final isSubbed = checkCustomerInfoIsPro(customerInfo) ||
+              customerInfo.allPurchasedProductIdentifiers.contains(productId) ||
+              customerInfo.allPurchasedProductIdentifiers.isNotEmpty;
 
+          if (isSubbed) {
+            debugPrint('[PurchaseService] Pro-Kauf über Listener bestätigt! Speichere persistent...');
+            await HiveService.setIsProUser(true);
+            _updateProStatus(true, ref);
+          }
+        } catch (e) {
+          debugPrint('[PurchaseService] Fehler im CustomerInfo Update Listener: $e');
+        }
+      });
+
+      // 3. Status beim Start abfragen
+      final isSubbed = await isUserSubscribed();
       if (isSubbed) {
-        debugPrint('[PurchaseService] Pro-Kauf über Listener bestätigt! Speichere persistent...');
         await HiveService.setIsProUser(true);
         _updateProStatus(true, ref);
       }
-    });
+    } on SocketException catch (e) {
+      debugPrint('[PurchaseService] Offline beim Start (SocketException): $e. Fallback auf Hive-Status.');
+      _fallbackToLocalCachedPro(ref);
+    } on PlatformException catch (e) {
+      debugPrint('[PurchaseService] Offline/PlatformException beim Start: ${e.message}. Fallback auf Hive-Status.');
+      _fallbackToLocalCachedPro(ref);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('unable to resolve host') ||
+          msg.contains('networkerror') ||
+          msg.contains('failed host lookup') ||
+          msg.contains('client is offline')) {
+        debugPrint('[PurchaseService] Offline/Netzwerkfehler beim Start: $e. Fallback auf Hive-Status.');
+      } else {
+        debugPrint('[PurchaseService] Unerwarteter Fehler bei Purchases.init: $e');
+      }
+      _fallbackToLocalCachedPro(ref);
+    }
+  }
 
-    // 3. Status beim Start abfragen
-    final isSubbed = await isUserSubscribed();
-    if (isSubbed) {
-      await HiveService.setIsProUser(true);
+  static void _fallbackToLocalCachedPro([dynamic ref]) {
+    final cached = HiveService.getIsProUser();
+    if (cached) {
+      _cachedIsPremium = true;
       _updateProStatus(true, ref);
     }
   }
 
-  /// Prüft CustomerInfo auf Pro-Berechtigung oder Kauf von 'foodsnap_lifetime'
+  /// Pro ist NUR aktiv, wenn genau das Entitlement [entitlementId] aktiv ist.
+  /// Fallback: der konkrete Lifetime-Kauf [productId] (falls im RevenueCat-Dashboard
+  /// noch nicht mit dem Entitlement verknüpft). Fremde Entitlements/Abos zählen nicht.
   static bool checkCustomerInfoIsPro(CustomerInfo customerInfo) {
     final hasProEntitlement =
-        customerInfo.entitlements.all[entitlementId]?.isActive ?? false;
-    final hasAnyActiveEntitlement =
-        customerInfo.entitlements.active.isNotEmpty;
-    final hasLifetimeProduct =
-        customerInfo.allPurchasedProductIdentifiers.contains(productId) ||
-        customerInfo.nonSubscriptionTransactions
-            .any((t) => t.productIdentifier == productId);
-    final hasActiveSub = customerInfo.activeSubscriptions.isNotEmpty;
+        customerInfo.entitlements.active[entitlementId]?.isActive ?? false;
+    final hasLifetimeProduct = customerInfo.nonSubscriptionTransactions
+        .any((t) => t.productIdentifier == productId);
 
-    final isPro = hasProEntitlement ||
-        hasAnyActiveEntitlement ||
-        hasLifetimeProduct ||
-        hasActiveSub;
-
-    debugPrint('[PurchaseService] Statusprüfung: '
-        'hasProEntitlement=$hasProEntitlement, '
-        'hasAnyActiveEntitlement=$hasAnyActiveEntitlement, '
-        'hasLifetimeProduct=$hasLifetimeProduct, '
-        'hasActiveSub=$hasActiveSub -> isPro=$isPro');
-
+    final isPro = hasProEntitlement || hasLifetimeProduct;
+    AppLog.d('PurchaseService',
+        'entitlement[$entitlementId]=$hasProEntitlement, lifetime=$hasLifetimeProduct -> isPro=$isPro');
     return isPro;
   }
 
@@ -193,6 +215,12 @@ class PurchaseService {
         _updateProStatus(true);
       }
       return isSubbed;
+    } on SocketException catch (e) {
+      debugPrint('[PurchaseService] Offline bei isUserSubscribed (SocketException): $e');
+      return HiveService.getIsProUser();
+    } on PlatformException catch (e) {
+      debugPrint('[PurchaseService] PlatformException bei isUserSubscribed: ${e.message}');
+      return HiveService.getIsProUser();
     } catch (e) {
       debugPrint('[PurchaseService] Fehler beim Prüfen des Abos: $e');
       return HiveService.getIsProUser();
@@ -203,6 +231,12 @@ class PurchaseService {
   static Future<Offerings?> getOfferings() async {
     try {
       return await Purchases.getOfferings();
+    } on SocketException catch (e) {
+      debugPrint('[PurchaseService] Offline bei getOfferings (SocketException): $e');
+      return null;
+    } on PlatformException catch (e) {
+      debugPrint('[PurchaseService] PlatformException bei getOfferings: ${e.message}');
+      return null;
     } catch (e) {
       debugPrint('[PurchaseService] Fehler beim Laden der Offerings: $e');
       return null;
@@ -304,9 +338,15 @@ class PurchaseService {
         return true;
       }
       return false;
+    } on SocketException catch (e) {
+      debugPrint('>>> [DEBUG-RESTORE-FEHLER] Offline bei Wiederherstellung (SocketException): $e');
+      return HiveService.getIsProUser();
+    } on PlatformException catch (e) {
+      debugPrint('>>> [DEBUG-RESTORE-FEHLER] PlatformException bei Wiederherstellung: ${e.message}');
+      return HiveService.getIsProUser();
     } catch (e, stack) {
       debugPrint('>>> [DEBUG-RESTORE-FEHLER] Fehler beim Wiederherstellen: $e\n$stack');
-      return false;
+      return HiveService.getIsProUser();
     }
   }
 

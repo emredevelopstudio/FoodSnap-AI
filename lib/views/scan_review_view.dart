@@ -212,7 +212,12 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   flex: 3,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
-                    child: _buildFormSection(theme, isDark),
+                    child: Column(
+                      children: [
+                        if (_isUncertainMeal) _buildUncertaintyBanner(isDark),
+                        _buildFormSection(theme, isDark),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -222,6 +227,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  if (_isUncertainMeal) _buildUncertaintyBanner(isDark),
                   if (widget.imagePath != null) ...[
                     _buildImageSection(),
                     const SizedBox(height: 16),
@@ -247,6 +253,78 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
             onPressed: _saveMeal,
           ),
         ),
+      ),
+    );
+  }
+
+  bool get _isUncertainMeal {
+    final name = widget.initialMeal.name;
+    final reason = widget.initialMeal.healthReason;
+    final cat = widget.initialMeal.healthCategory;
+    return name.isEmpty ||
+        name == 'Unbekannt' ||
+        name == 'Unbekanntes Lebensmittel' ||
+        name == 'Nicht sicher erkannt' ||
+        name == 'Nicht eindeutig erkannt' ||
+        name == 'Kein Lebensmittel erkannt' ||
+        cat == 'Unbekannt' ||
+        (reason != null &&
+            (reason.contains('nicht eindeutig') ||
+                reason.contains('nicht sicher') ||
+                reason.contains('kein Lebensmittel') ||
+                reason.contains('nicht erkannt'))) ||
+        name.toLowerCase().contains('unbekanntes lebensmittel') ||
+        name.toLowerCase().contains('nicht sicher erkannt') ||
+        name.toLowerCase().contains('nicht eindeutig erkannt') ||
+        name.toLowerCase().contains('kein lebensmittel');
+  }
+
+  Widget _buildUncertaintyBanner(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: Color(0xFFF59E0B),
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Essen/Getränk nicht eindeutig erkannt',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13.5,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Passe die Angaben unten bitte bei Bedarf manuell an.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -488,20 +566,23 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Erkannte Komponenten (${_editableItems.length})',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Tippe auf die Grammzahl zur schnellen Anpassung',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Erkannte Komponenten (${_editableItems.length})',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Tippe auf die Grammzahl zur schnellen Anpassung',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 8),
             TextButton.icon(
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Zutat +', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),

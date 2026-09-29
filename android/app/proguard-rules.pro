@@ -20,3 +20,11 @@
 # RevenueCat Purchases SDK
 -keep class com.revenuecat.purchases.** { *; }
 
+# TensorFlow Lite & MediaPipe GenAI / LiteRT-LM Native Bindings
+-keep class org.tensorflow.lite.** { *; }
+-dontwarn org.tensorflow.lite.**
+-keep class com.google.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.**
+-keep class com.google.ai.edge.** { *; }
+-dontwarn com.google.ai.edge.**
+

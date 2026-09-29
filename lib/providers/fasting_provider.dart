@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../services/hive_service.dart';
+import '../core/logging/app_log.dart';
 
 enum FastingPlan {
   plan12_12(
@@ -150,7 +151,7 @@ class FastingProvider extends ChangeNotifier {
       if (savedPlan is String) {
         try {
           _selectedPlan = FastingPlan.values.byName(savedPlan);
-        } catch (_) {
+        } on ArgumentError {
           _selectedPlan = FastingPlan.fromHours(_targetFastingHours);
         }
       } else {
@@ -170,7 +171,9 @@ class FastingProvider extends ChangeNotifier {
             _startWeight = profile.weightKg;
             _targetWeight = (profile.weightKg - 5.0).clamp(30.0, 300.0);
           }
-        } catch (_) {}
+        } catch (e, st) {
+          AppLog.e('Fasting', 'Profilgewicht nicht lesbar', e, st);
+        }
       }
 
       if (_isFasting && _startTime != null) {

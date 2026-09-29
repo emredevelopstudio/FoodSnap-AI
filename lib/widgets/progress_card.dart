@@ -234,7 +234,7 @@ class ProgressCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // 3. Inner White Card: 3 Macro Mini-Bar Segments (Ziel %, Kohlenhydrate, Fett)
+          // 3. Inner White Card: 2 Macro Mini-Bar Segments (Ziel %, Fett)
           Container(
             decoration: BoxDecoration(
               color: innerBg,
@@ -247,11 +247,10 @@ class ProgressCard extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Expanded(
-                  flex: 3,
                   child: _buildMacroSegment(
                     label: l10n.goal,
                     value: '$percentVal%',
@@ -262,25 +261,8 @@ class ProgressCard extends StatelessWidget {
                     subtextColor: subtextColor,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 16),
                 Expanded(
-                  flex: 5,
-                  child: _buildMacroSegment(
-                    label: l10n.isEn ? 'Carbs' : 'Kohlenhydrate',
-                    value: '${progress.totalCarbsG.toStringAsFixed(1)} g',
-                    ratio: (progress.targetCarbsG > 0
-                            ? progress.totalCarbsG / progress.targetCarbsG
-                            : 0.0)
-                        .clamp(0.0, 1.0),
-                    trackColor: trackColor,
-                    barColor: const Color(0xFF1E88E5),
-                    textColor: textColor,
-                    subtextColor: subtextColor,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 4,
                   child: _buildMacroSegment(
                     label: l10n.fat,
                     value: '${progress.totalFatG.toStringAsFixed(1)} g',

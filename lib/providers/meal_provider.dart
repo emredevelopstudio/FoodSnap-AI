@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/meal_entry.dart';
 import '../services/hive_service.dart';
+import '../services/local_vision_service.dart';
 import '../services/gemini_vision_service.dart';
 import 'goals_provider.dart';
 
@@ -163,10 +164,20 @@ final dailyProgressProvider = Provider<DailyProgress>((ref) {
   );
 });
 
-final geminiVisionServiceProvider = Provider<GeminiVisionService>((ref) {
-  final key = ref.watch(geminiApiKeyProvider);
-  return GeminiVisionService(apiKey: key);
+final localVisionServiceProvider = Provider<LocalVisionService>((ref) {
+  final service = LocalVisionService();
+  ref.onDispose(service.close);
+  return service;
 });
+
+final geminiVisionServiceProvider = Provider<GeminiVisionService>((ref) {
+  final service = GeminiVisionService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+// Alias für Abwärtskompatibilität
+final foodClassifierServiceProvider = localVisionServiceProvider;
 
 class CreatineWaterNotifier extends StateNotifier<int> {
   CreatineWaterNotifier() : super(HiveService.getCreatineWaterMl());

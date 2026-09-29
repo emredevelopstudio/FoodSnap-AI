@@ -1,4 +1,3 @@
-import '../services/gemini_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/daily_goals.dart';
 import '../models/user_profile.dart';
@@ -54,8 +53,4 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
 final userProfileProvider =
     StateNotifierProvider<UserProfileNotifier, UserProfile>((ref) {
   return UserProfileNotifier(ref);
-});
-
-final geminiApiKeyProvider = StateProvider<String>((ref) {
-  return GeminiVisionService.defaultApiKey;
 });

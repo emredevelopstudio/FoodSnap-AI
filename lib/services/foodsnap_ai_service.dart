@@ -1,2 +1,1 @@
-export 'gemini_service.dart';
-
+export 'local_vision_service.dart';

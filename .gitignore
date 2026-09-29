@@ -58,3 +58,25 @@ app.*.map.json
 # Google Services & Firebase
 google-services.json
 GoogleService-Info.plist
+# Build-Artefakte (nie committen)
+/android/build/
+/android/app/build/
+/android/.gradle/
+/android/local.properties
+/ios/Pods/
+/ios/.symlinks/
+/windows/flutter/ephemeral/
+*.aab
+*.apk
+
+# ML-Modelle: nur die gebündelten Dateien in assets/models/ sind Quelle.
+# Keine Kopien im nativen Android-Asset-Ordner (würden doppelt ins APK wandern).
+/android/app/src/main/assets/models/
+/assets/models/*.task
+/assets/models/food_classifier.tflite
+/assets/models/mobilenet_food.tflite
+/assets/models/labels.txt
+
+# Cloud Functions
+/functions/node_modules/
+/functions/lib/
