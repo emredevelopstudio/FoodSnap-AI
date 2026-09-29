@@ -1,7 +1,38 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'ad_consent_service.dart';
 import 'purchase_service.dart';
+
+/// Für Widgets mit Anzeigen: ruft [load] erst auf, wenn [AdService.adsReady] true ist
+/// (sofort, falls schon bereit – sonst sobald die Einwilligung vorliegt).
+mixin AdsReadyGate<T extends StatefulWidget> on State<T> {
+  VoidCallback? _pendingLoad;
+
+  void loadWhenAdsReady(VoidCallback load) {
+    if (AdService.adsReady.value) {
+      load();
+      return;
+    }
+    _pendingLoad = load;
+    AdService.adsReady.addListener(_onAdsReady);
+  }
+
+  void _onAdsReady() {
+    if (!AdService.adsReady.value) return;
+    AdService.adsReady.removeListener(_onAdsReady);
+    final load = _pendingLoad;
+    _pendingLoad = null;
+    if (mounted && load != null) load();
+  }
+
+  @override
+  void dispose() {
+    AdService.adsReady.removeListener(_onAdsReady);
+    super.dispose();
+  }
+}
 
 class AdService {
   /// Diagnoseschalter: Bei `true` werden auch im Release-Build die offiziellen
@@ -107,10 +138,21 @@ class AdService {
     return _testRewardedUnitIdAndroid;
   }
 
-  /// Initialisiert das Google Mobile Ads SDK und lädt Interstitial & Rewarded Ads vor (nur bei Nicht-Pro-Nutzern)
+  /// Wird `true`, sobald eine gültige Werbe-Einwilligung vorliegt und das SDK läuft.
+  /// Vorher darf KEINE Anzeige angefragt werden (DSGVO/TCF).
+  static final ValueNotifier<bool> adsReady = ValueNotifier<bool>(false);
+
+  /// Holt zuerst die Werbe-Einwilligung (UMP) und startet erst danach das SDK.
+  /// Nach dem ersten Frame aufrufen, da der Einwilligungsdialog eine sichtbare Activity braucht.
   static Future<void> init() async {
     try {
+      final canRequestAds = await AdConsentService.gatherConsent();
+      if (!canRequestAds) {
+        debugPrint('[AdMob] Keine Werbe-Einwilligung – es werden keine Anzeigen geladen.');
+        return;
+      }
       await MobileAds.instance.initialize();
+      adsReady.value = true;
       if (!PurchaseService.isProUser) {
         loadInterstitialAd();
         loadRewardedAd();
@@ -122,7 +164,7 @@ class AdService {
 
   /// Lädt eine Interstitial-Ad vor, falls noch keine geladen ist (und der Nutzer kein Pro hat)
   static void loadInterstitialAd() {
-    if (PurchaseService.isProUser) return;
+    if (PurchaseService.isProUser || !adsReady.value) return;
     if (_interstitialAd != null || _isInterstitialLoading) return;
 
     _isInterstitialLoading = true;
@@ -183,7 +225,7 @@ class AdService {
 
   /// Lädt eine Rewarded-Ad vor, falls noch keine geladen ist (und der Nutzer kein Pro hat)
   static void loadRewardedAd() {
-    if (PurchaseService.isProUser) return;
+    if (PurchaseService.isProUser || !adsReady.value) return;
     if (_rewardedAd != null || _isRewardedLoading) return;
 
     _isRewardedLoading = true;

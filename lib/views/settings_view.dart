@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/meal_provider.dart';
+import '../services/ad_consent_service.dart';
 import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
 import '../widgets/privacy_consent_dialog.dart';
@@ -653,6 +654,33 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                         ),
                       ),
                     ),
+                  ),
+                  // Pflicht-Einstieg laut Google (EU): Werbe-Einwilligung jederzeit änderbar
+                  FutureBuilder<bool>(
+                    future: AdConsentService.isPrivacyOptionsRequired(),
+                    builder: (context, snapshot) {
+                      if (snapshot.data != true) return const SizedBox.shrink();
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.campaign_outlined, color: Color(0xFF2563EB)),
+                        ),
+                        title: const Text(
+                          'Werbe-Einstellungen',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        subtitle: Text(
+                          'Einwilligung für personalisierte Werbung ändern',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                        onTap: AdConsentService.showPrivacyOptionsForm,
+                      );
+                    },
                   ),
                 ],
               ),

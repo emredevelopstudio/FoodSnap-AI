@@ -12,7 +12,8 @@ class AppBannerAd extends ConsumerStatefulWidget {
   ConsumerState<AppBannerAd> createState() => _AppBannerAdState();
 }
 
-class _AppBannerAdState extends ConsumerState<AppBannerAd> {
+class _AppBannerAdState extends ConsumerState<AppBannerAd>
+    with AdsReadyGate {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
   bool _isLoading = false;
@@ -21,11 +22,12 @@ class _AppBannerAdState extends ConsumerState<AppBannerAd> {
   void initState() {
     super.initState();
     if (!PurchaseService.isProUser) {
-      _loadBanner();
+      loadWhenAdsReady(_loadBanner);
     }
   }
 
   void _loadBanner() {
+    if (!AdService.adsReady.value) return;
     final isPro = PurchaseService.isProUser || (mounted && ref.read(premiumProvider));
     if (isPro || _bannerAd != null || _isLoading) return;
     _isLoading = true;

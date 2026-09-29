@@ -18,17 +18,19 @@ class AppNativeAdCard extends ConsumerStatefulWidget {
   ConsumerState<AppNativeAdCard> createState() => _AppNativeAdCardState();
 }
 
-class _AppNativeAdCardState extends ConsumerState<AppNativeAdCard> {
+class _AppNativeAdCardState extends ConsumerState<AppNativeAdCard>
+    with AdsReadyGate {
   NativeAd? _nativeAd;
   bool _isLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadNativeAd();
+    loadWhenAdsReady(_loadNativeAd);
   }
 
   void _loadNativeAd() {
+    if (!AdService.adsReady.value) return;
     final isPro = ref.read(premiumProvider) || PurchaseService.isProUser;
     if (isPro) return;
     if (!Platform.isAndroid && !Platform.isIOS) return;

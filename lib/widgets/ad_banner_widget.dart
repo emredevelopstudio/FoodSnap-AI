@@ -35,6 +35,7 @@ class _AdBannerWidgetState extends ConsumerState<AdBannerWidget> {
   }
 
   void _loadBannerAd() {
+    if (!AdService.adsReady.value) return;
     _bannerAd = BannerAd(
       adUnitId: AdService.bannerAdUnitId,
       size: AdSize.banner,

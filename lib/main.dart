@@ -9,7 +9,6 @@ import 'providers/theme_provider.dart';
 import 'services/hive_service.dart';
 import 'services/purchase_service.dart';
 import 'services/ad_service.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'core/logging/app_log.dart';
 import 'views/responsive_scaffold.dart';
 
@@ -41,19 +40,18 @@ void main() async {
     debugPrint('[PurchaseService] Start-Initialisierung übersprungen/Fehler: $e');
   }
 
-  // 6. MobileAds & AdService sicher in try-catch initialisieren (Werbefehler blockieren/crashen den App-Start nicht)
-  try {
-    await MobileAds.instance.initialize();
-    await AdService.init();
-  } catch (e) {
-    debugPrint('[AdMob] Initialisierungsfehler bei MobileAds/AdService: $e');
-  }
-
   runApp(
     const ProviderScope(
       child: FoodSnapApp(),
     ),
   );
+
+  // 5. Werbung: Erst Einwilligung (UMP-Dialog, EU), dann SDK-Start – nach dem ersten
+  // Frame, weil der Dialog eine sichtbare Activity braucht. Pro-Nutzer sehen keine Werbung.
+  // AdService.init() fängt Fehler selbst ab und blockiert den App-Start nicht.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!PurchaseService.isProUser) AdService.init();
+  });
 }
 
 class FoodSnapApp extends ConsumerWidget {
