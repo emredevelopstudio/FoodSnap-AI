@@ -50,10 +50,4 @@ void main() {
     await tester.pump();
     expect(loads, 0);
   });
-
-  test('Interstitial/Rewarded werden ohne Einwilligung nicht angefragt', () {
-    // Würde ohne Sperre einen Platform-Channel-Aufruf auslösen und im Test fehlschlagen.
-    AdService.loadInterstitialAd();
-    AdService.loadRewardedAd();
-  });
 }

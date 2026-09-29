@@ -5,8 +5,6 @@ import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../models/meal_item.dart';
 import '../providers/meal_provider.dart';
-import '../services/ad_service.dart';
-import '../services/purchase_service.dart';
 
 class ScanReviewView extends ConsumerStatefulWidget {
   final MealEntry initialMeal;
@@ -159,15 +157,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
       ),
     );
 
-    final isPremium = ref.read(premiumProvider);
-    AdService.showInterstitialAd(
-      isPremium: isPremium,
-      onDismissed: () {
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-      },
-    );
+    Navigator.of(context).pop();
   }
 
   @override
