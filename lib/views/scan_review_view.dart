@@ -554,8 +554,6 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
               Expanded(child: _buildSummaryStat('Protein', '${_totalProtein.toStringAsFixed(1)} g', const Color(0xFF3B82F6))),
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
-              Expanded(child: _buildSummaryStat('Kohlenhydrate', '${_totalCarbs.toStringAsFixed(1)} g', const Color(0xFFF59E0B))),
-              Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
               Expanded(child: _buildSummaryStat('Fett', '${_totalFat.toStringAsFixed(1)} g', const Color(0xFFEF4444))),
             ],
           ),
@@ -662,7 +660,6 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
 
     final currentCalories = double.tryParse(item.caloriesCtrl.text) ?? 0.0;
     final currentProtein = double.tryParse(item.proteinCtrl.text) ?? 0.0;
-    final currentCarbs = double.tryParse(item.carbsCtrl.text) ?? 0.0;
     final currentFat = double.tryParse(item.fatCtrl.text) ?? 0.0;
 
     return Card(
@@ -803,7 +800,6 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               children: [
                 _buildMacroPill('${currentCalories.round()} kcal', const Color(0xFF10B981)),
                 _buildMacroPill('${currentProtein.toStringAsFixed(1)}g P', const Color(0xFF3B82F6)),
-                _buildMacroPill('${currentCarbs.toStringAsFixed(1)}g K', const Color(0xFFF59E0B)),
                 _buildMacroPill('${currentFat.toStringAsFixed(1)}g F', const Color(0xFFEF4444)),
                 InkWell(
                   onTap: () => _showManualMacroEditSheet(item),
@@ -957,22 +953,6 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: item.carbsCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Kohlenhydrate (g)',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onChanged: (_) {
-                        item.recalcBaseRatios();
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: item.fatCtrl,

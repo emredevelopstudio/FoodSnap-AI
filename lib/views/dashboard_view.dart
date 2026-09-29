@@ -887,24 +887,6 @@ class DashboardView extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        controller: carbsController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          labelText: 'Kohlenhydrate',
-                          suffixText: 'g',
-                          prefixIcon: const Icon(Icons.grain, size: 20, color: Color(0xFFF59E0B)),
-                          filled: true,
-                          fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
                         controller: fatController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(

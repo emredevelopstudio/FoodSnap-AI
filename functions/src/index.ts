@@ -13,7 +13,14 @@ import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions";
 
 const GEMINI_KEY = defineSecret("GEMINI_KEY");
-const MODEL = "gemini-3.7-flash"; // Modell serverseitig fixiert – Client kann es nicht ändern.
+// Modelle serverseitig fixiert – Client kann sie nicht ändern. Bei 503/429/404 → nächstes Modell.
+const MODELS = [
+  "gemini-3.7-flash",
+  "gemini-3.8-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+];
 const MAX_BODY_BYTES = 4 * 1024 * 1024; // ~1024px-JPEG als Base64 passt locker rein.
 const RATE_LIMIT_PER_MIN = 10;
 
@@ -64,28 +71,37 @@ export const geminiProxy = onRequest(
       return;
     }
 
+    const payload = JSON.stringify({
+      contents,
+      generationConfig: { response_mime_type: "application/json", ...generationConfig },
+    });
+
     try {
-      const upstream = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": GEMINI_KEY.value(),
+      let upstream!: Response;
+      for (const [i, model] of MODELS.entries()) {
+        upstream = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": GEMINI_KEY.value(),
+            },
+            body: payload,
+            signal: AbortSignal.timeout(50_000),
           },
-          body: JSON.stringify({
-            contents,
-            generationConfig: { response_mime_type: "application/json", ...generationConfig },
-          }),
-          signal: AbortSignal.timeout(50_000),
-        },
-      );
+        );
+        const tryNext = [503, 429, 404].includes(upstream.status);
+        if (!tryNext || i === MODELS.length - 1) break;
+        logger.warn("Gemini model overloaded, falling back", { model, status: upstream.status });
+      }
 
       const text = await upstream.text();
       if (!upstream.ok) {
         logger.warn("Gemini upstream error", { status: upstream.status });
         // Keine Upstream-Details an den Client leaken, nur den Status.
-        res.status(upstream.status === 429 ? 429 : 502).json({ error: "upstream_error" });
+        const busy = upstream.status === 429 || upstream.status === 503;
+        res.status(busy ? upstream.status : 502).json({ error: "upstream_error" });
         return;
       }
       res.status(200).type("application/json").send(text);

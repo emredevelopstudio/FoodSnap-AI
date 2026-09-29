@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:foodsnap_ai/core/config/api_keys.dart';
 import 'package:foodsnap_ai/providers/meal_provider.dart';
@@ -125,6 +128,50 @@ void main() {
       expect(entry.items, isNotEmpty);
       expect(entry.items.first.name, 'Cheeseburger');
     });
+  });
+
+  group('GeminiVisionService Modell-Fallback', () {
+    Uint8List jpg() => Uint8List.fromList(img.encodeJpg(img.Image(width: 10, height: 10)));
+
+    test('weicht bei 503 auf das nächste Modell aus', () async {
+      final calledModels = <String>[];
+      final client = MockClient((req) async {
+        calledModels.add(req.url.pathSegments.last.split(':').first);
+        if (calledModels.length == 1) {
+          return http.Response('{"error":{"code":503}}', 503);
+        }
+        final text = jsonEncode({"meal_name": "Apfel", "total_calories": 52});
+        return http.Response(
+            jsonEncode({
+              "candidates": [
+                {
+                  "content": {
+                    "parts": [
+                      {"text": text}
+                    ]
+                  }
+                }
+              ]
+            }),
+            200);
+      });
+
+      final service = GeminiVisionService(apiKey: 'test', proxyUrl: '', client: client);
+      final meal = await service.analyzeFoodImage(imageBytes: jpg());
+
+      expect(meal.name, 'Apfel');
+      expect(calledModels, [
+        GeminiVisionService.fallbackModels[0],
+        GeminiVisionService.fallbackModels[1],
+      ]);
+    });
+
+    test('meldet „ausgelastet“ wenn alle Modelle 503 liefern', () async {
+      final client = MockClient((_) async => http.Response('{}', 503));
+      final service = GeminiVisionService(apiKey: 'test', proxyUrl: '', client: client);
+      await expectLater(service.analyzeFoodImage(imageBytes: jpg()),
+          throwsA(isA<ScanRateLimitException>()));
+    }, timeout: const Timeout(Duration(seconds: 20)));
   });
 
   group('ProgressCard Dashboard UI', () {

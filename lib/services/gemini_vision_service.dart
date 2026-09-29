@@ -38,6 +38,19 @@ class ScanAnalysisException implements Exception {
 class GeminiVisionService {
   static const String modelName = 'gemini-3.7-flash';
 
+  /// Ausweichkette bei Überlast (503), Rate-Limit (429) oder nicht verfügbarem
+  /// Modell (404). Die Lite-Modelle am Ende sind am stabilsten verfügbar.
+  static const List<String> fallbackModels = [
+    modelName,
+    'gemini-3.8-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+  ];
+
+  static bool _shouldTryNextModel(int status) =>
+      status == 503 || status == 429 || status == 404;
+
   final String apiKey;
   final String proxyUrl;
   final http.Client _client;
@@ -48,7 +61,7 @@ class GeminiVisionService {
         _client = client ?? http.Client() {
     if (!isConfigured) {
       AppLog.w(_tag,
-          'Weder GEMINI_PROXY_URL noch GEMINI_KEY gesetzt (--dart-define).');
+          'Kein Key/Proxy gesetzt. Starten mit: flutter run --dart-define-from-file=.env');
     }
   }
 
@@ -73,22 +86,48 @@ class GeminiVisionService {
   /// Sendet einen generateContent-Body und liefert den Text des ersten Kandidaten.
   /// Proxy: Body geht 1:1 an die Cloud Function, die den Key serverseitig ergänzt.
   /// Direkt: Key im Header (nicht in der URL → taucht nicht in Logs/Proxies auf).
+  /// Direktmodus: bei 503/429 automatisch auf das nächste Modell in [fallbackModels]
+  /// ausweichen (der Proxy macht das serverseitig selbst).
   Future<String?> _generate(Map<String, dynamic> body, Duration timeout) async {
-    final Uri uri;
-    final headers = {'Content-Type': 'application/json'};
+    final encoded = jsonEncode(body);
+
     if (proxyUrl.isNotEmpty) {
-      uri = Uri.parse(proxyUrl);
-    } else {
-      uri = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent');
-      headers['x-goog-api-key'] = apiKey;
+      final response = await _client
+          .post(Uri.parse(proxyUrl),
+              headers: {'Content-Type': 'application/json'}, body: encoded)
+          .timeout(timeout);
+      return _extractText(response);
     }
 
-    final response = await _client
-        .post(uri, headers: headers, body: jsonEncode(body))
-        .timeout(timeout);
+    for (var i = 0; i < fallbackModels.length; i++) {
+      final model = fallbackModels[i];
+      final response = await _client
+          .post(
+            Uri.parse(
+                'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: encoded,
+          )
+          .timeout(timeout);
 
+      if (_shouldTryNextModel(response.statusCode) &&
+          i < fallbackModels.length - 1) {
+        AppLog.w(_tag,
+            '$model antwortet ${response.statusCode}, weiche aus auf ${fallbackModels[i + 1]}');
+        continue;
+      }
+      return _extractText(response);
+    }
+    return null;
+  }
+
+  String? _extractText(http.Response response) {
+    // 429 = Kontingent, 503 = Google-Überlast → beides dem Nutzer als „ausgelastet“ melden.
     if (response.statusCode == 429 ||
+        response.statusCode == 503 ||
         response.body.toLowerCase().contains('resource_exhausted')) {
       throw ScanRateLimitException();
     }
@@ -234,8 +273,9 @@ class GeminiVisionService {
       throw const FormatException('Die ausgewählte Bilddatei ist leer.');
     }
     if (!isConfigured) {
-      throw const ScanAnalysisException(
-          'Die KI-Analyse ist in dieser Version nicht konfiguriert.');
+      throw ScanAnalysisException(kDebugMode
+          ? 'Kein Gemini-Key: App mit --dart-define-from-file=.env starten.'
+          : 'Die KI-Analyse ist in dieser Version nicht konfiguriert.');
     }
 
     final compressed =

@@ -290,7 +290,6 @@ class MealCard extends StatelessWidget {
                           children: [
                             _macroBadge('Kalorien', '${meal.calories} kcal', Colors.orange.shade800),
                             _macroBadge('Protein', '${meal.protein.toStringAsFixed(1)} g', const Color(0xFF1E88E5)),
-                            _macroBadge('Carbs', '${meal.carbs.toStringAsFixed(1)} g', Colors.teal.shade800),
                             _macroBadge('Fett', '${meal.fat.toStringAsFixed(1)} g', Colors.purple.shade800),
                           ],
                         ),

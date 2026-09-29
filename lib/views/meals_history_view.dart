@@ -681,10 +681,6 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                     const Color(0xFF3B82F6),
                   ),
                   _buildMacroBadge(
-                    '${meal.carbs.toStringAsFixed(meal.carbs % 1 == 0 ? 0 : 1)}g K',
-                    const Color(0xFFF59E0B),
-                  ),
-                  _buildMacroBadge(
                     '${meal.fat.toStringAsFixed(meal.fat % 1 == 0 ? 0 : 1)}g F',
                     const Color(0xFFEF4444),
                   ),
@@ -1009,18 +1005,6 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: carbsController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: InputDecoration(
-                              labelText: 'Kohlenhydrate (g)',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              prefixIcon: const Icon(Icons.grain_outlined),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             controller: fatController,
@@ -1684,7 +1668,6 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                                     children: [
                                       _buildMacroBadge('${meal.calories} kcal', const Color(0xFF10B981)),
                                       _buildMacroBadge('${meal.protein.round()}g P', const Color(0xFF3B82F6)),
-                                      _buildMacroBadge('${meal.carbs.round()}g K', const Color(0xFFF59E0B)),
                                       _buildMacroBadge('${meal.fat.round()}g F', const Color(0xFFEF4444)),
                                       if (planPortionStr != null)
                                         _buildMacroBadge(planPortionStr, const Color(0xFF06B6D4)),

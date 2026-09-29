@@ -4,11 +4,15 @@
 ///   flutter build appbundle --dart-define=GEMINI_PROXY_URL=https://<region>-<projekt>.cloudfunctions.net/geminiProxy
 ///
 /// Nur für lokale Entwicklung (Key landet im Binary!):
-///   flutter run --dart-define=GEMINI_KEY=<dein-key>
+///   flutter run --dart-define-from-file=.env
+/// (.env wird dabei NICHT als Asset gebündelt, nur zur Build-Zeit gelesen.)
 class ApiKeys {
   ApiKeys._();
 
-  static const String geminiApiKey = String.fromEnvironment('GEMINI_KEY');
+  static const String geminiApiKey = String.fromEnvironment(
+    'GEMINI_KEY',
+    defaultValue: String.fromEnvironment('GEMINI_API_KEY'),
+  );
   static const String geminiProxyUrl =
       String.fromEnvironment('GEMINI_PROXY_URL');
 
