@@ -120,7 +120,7 @@ class PrivacyConsentDialog extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Info-Kasten zu Lokaler On-Device KI & Datenschutz
+              // Info-Kasten: Foto-Übertragung an Google Gemini (muss mit privacy.html übereinstimmen)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
@@ -142,7 +142,7 @@ class PrivacyConsentDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Deine Fotos werden zu 100 % lokal und offline auf deinem Gerät verarbeitet. Es werden keine Bilddaten an Cloud-Server gesendet oder verkauft.',
+                        'Zur Erkennung wird dein Foto verschlüsselt an Google (Gemini API) übertragen und dort analysiert. Deine Mahlzeiten und Fotos werden nur auf deinem Gerät gespeichert und nicht verkauft.',
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.35,

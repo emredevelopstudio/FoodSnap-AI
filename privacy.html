@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -8,22 +8,64 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; padding: 30px; max-width: 800px; margin: auto; color: #222; }
         h1, h2 { color: #111; }
         .box { background: #f4f4f5; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.95em; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+        th { background: #f4f4f5; }
+        .muted { color: #666; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <h1>FoodSnap AI – Datenschutzerklärung</h1>
-    <p>Der Schutz deiner persönlichen Daten ist uns ein wichtiges Anliegen. FoodSnap AI verarbeitet Daten ausschließlich lokal auf deinem Gerät sowie zur Bildanalyse über sichere API-Schnittstellen.</p>
-    
-    <h2>1. Datennutzung & Bildverarbeitung</h2>
-    <p>Aufgenommene oder hochgeladene Mahlzeiten-Fotos werden zur Analyse und Nährwerterkennung verarbeitet. Es findet kein Verkauf oder unbefugte Weitergabe personenbezogener Daten an Dritte statt.</p>
+    <p class="muted">Stand: 29. September 2026</p>
+
+    <p>Der Schutz deiner Daten ist uns wichtig. Hier erfährst du, welche Daten FoodSnap AI verarbeitet, wohin sie übertragen werden und welche Rechte du hast. FoodSnap AI erfordert kein Benutzerkonto.</p>
+
+    <h2>1. Verantwortlicher</h2>
+    <p>emredevelopstudio<br>
+    E-Mail: <strong>emredevelop.studio@gmail.com</strong></p>
+
+    <h2>2. Foto-Analyse mit Künstlicher Intelligenz (Google Gemini)</h2>
+    <p>Wenn du eine Mahlzeit fotografierst oder ein Bild aus deiner Galerie auswählst, wird das Foto <strong>verkleinert und verschlüsselt (HTTPS) an die Gemini API von Google</strong> übertragen. Dort wird es analysiert, um das Gericht zu erkennen und Nährwerte zu schätzen. Das Ergebnis wird an die App zurückgesendet.</p>
+    <ul>
+        <li><strong>Empfänger:</strong> Google LLC bzw. Google Ireland Ltd. (Gemini API). Eine Verarbeitung auf Servern außerhalb der EU, insbesondere in den USA, ist möglich.</li>
+        <li><strong>Rechtsgrundlage:</strong> deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die du beim ersten Scan erteilst. Ohne Einwilligung bleibt der KI-Scan deaktiviert.</li>
+        <li><strong>Widerruf:</strong> jederzeit in den App-Einstellungen möglich.</li>
+        <li>Bitte fotografiere keine Personen oder sensiblen Dokumente.</li>
+        <li>Informationen von Google: <a href="https://ai.google.dev/gemini-api/terms">Gemini API Terms</a> und <a href="https://policies.google.com/privacy">Google Datenschutzerklärung</a>.</li>
+    </ul>
+
+    <h2>3. Barcode-Scan (Open Food Facts)</h2>
+    <p>Beim Scannen eines Barcodes wird ausschließlich die Barcode-Nummer an die offene Lebensmitteldatenbank <a href="https://world.openfoodfacts.org/privacy">Open Food Facts</a> gesendet, um Produktname und Nährwerte abzurufen. Es werden keine Fotos übertragen. Die Barcode-Erkennung selbst erfolgt auf deinem Gerät.</p>
+
+    <h2>4. Lokal gespeicherte Daten</h2>
+    <p>Deine Mahlzeiten, Fotos, Ziele, dein Profil (z.&nbsp;B. Gewicht, Größe) und Fastendaten werden <strong>nur lokal auf deinem Gerät</strong> gespeichert. Wir betreiben keinen eigenen Server, auf dem diese Daten abgelegt werden.</p>
+
+    <h2>5. Werbung (Google AdMob)</h2>
+    <p>In der kostenlosen Version wird Werbung über Google AdMob angezeigt. Dabei können Geräte-Kennungen (z.&nbsp;B. die Werbe-ID), IP-Adresse und Nutzungsdaten an Google übermittelt werden. Die Werbe-ID kannst du in den Android-Einstellungen zurücksetzen oder löschen. Mehr dazu: <a href="https://policies.google.com/technologies/ads">So verwendet Google Daten für Werbung</a>. In FoodSnap AI Pro wird keine Werbung angezeigt.</p>
+
+    <h2>6. In-App-Käufe (Google Play & RevenueCat)</h2>
+    <p>Käufe werden über Google Play abgewickelt. Zur Prüfung und Wiederherstellung von Käufen nutzen wir RevenueCat, Inc. (USA). Dabei werden eine anonyme App-Nutzer-ID und Kaufinformationen verarbeitet, jedoch keine Zahlungsdaten. Mehr dazu: <a href="https://www.revenuecat.com/privacy">RevenueCat Datenschutz</a>.</p>
+
+    <h2>7. Übersicht</h2>
+    <table>
+        <tr><th>Daten</th><th>Empfänger</th><th>Zweck</th></tr>
+        <tr><td>Mahlzeiten-Fotos</td><td>Google (Gemini API)</td><td>Erkennung &amp; Nährwertschätzung</td></tr>
+        <tr><td>Barcode-Nummer</td><td>Open Food Facts</td><td>Produktdaten abrufen</td></tr>
+        <tr><td>Werbe-ID, Gerätedaten</td><td>Google AdMob</td><td>Werbung (nur Gratis-Version)</td></tr>
+        <tr><td>Anonyme ID, Kaufstatus</td><td>RevenueCat, Google Play</td><td>Käufe prüfen &amp; wiederherstellen</td></tr>
+        <tr><td>Mahlzeiten, Profil, Fasten</td><td>niemand (nur lokal)</td><td>App-Funktionen</td></tr>
+    </table>
+    <p>Es findet kein Verkauf personenbezogener Daten statt.</p>
+
+    <h2>8. Deine Rechte</h2>
+    <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit sowie auf Widerruf deiner Einwilligung mit Wirkung für die Zukunft. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren.</p>
 
     <div class="box">
-        <h2>2. Datenlöschung (Data Deletion Request)</h2>
-        <p>Nutzer können jederzeit die vollständige Löschung aller mit der App verbundenen Daten anfordern.</p>
-        <p>Sende hierzu eine formlose E-Mail an:<br>
+        <h2>9. Datenlöschung (Data Deletion Request)</h2>
+        <p>Da deine App-Daten nur auf deinem Gerät liegen, kannst du sie jederzeit selbst vollständig löschen: <em>Einstellungen &gt; Apps &gt; FoodSnap AI &gt; Speicher &gt; Daten löschen</em> oder durch Deinstallation der App.</p>
+        <p>Für Fragen oder Löschanfragen zu Daten bei Drittanbietern schreibe an:<br>
         <strong>emredevelop.studio@gmail.com</strong><br>
         mit dem Betreff: <em>"Datenlöschung FoodSnap AI"</em>.</p>
-        <p>Alle lokal gespeicherten App-Daten kannst du zudem jederzeit direkt auf deinem Gerät unter <em>Einstellungen &gt; Apps &gt; FoodSnap AI &gt; Speicher &gt; Daten löschen</em> entfernen.</p>
     </div>
 </body>
 </html>

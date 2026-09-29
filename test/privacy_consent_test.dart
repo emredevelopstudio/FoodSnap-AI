@@ -82,11 +82,13 @@ void main() {
       expect(find.text('Datenschutz & KI-Nutzung'), findsOneWidget);
       expect(find.byIcon(Icons.security_rounded), findsOneWidget);
 
-      // Verify description & local on-device ML info
+      // Muss die Übertragung an Google Gemini offenlegen (siehe privacy.html)
       expect(
-        find.textContaining('lokal und offline auf deinem Gerät verarbeitet'),
+        find.textContaining('an Google (Gemini API) übertragen'),
         findsOneWidget,
       );
+      // Falsche Offline-Zusicherung darf nicht zurückkommen
+      expect(find.textContaining('offline'), findsNothing);
 
       // Verify link button
       expect(find.text('Datenschutzerklärung lesen'), findsOneWidget);
