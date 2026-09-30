@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -11,6 +12,36 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Gemini-Konfiguration aus ../.env automatisch als --dart-define an Flutter geben,
+// damit einfaches `flutter run` / `flutter build` funktioniert (ohne --dart-define-from-file).
+// - Per Kommandozeile übergebene Werte haben Vorrang.
+// - Mit GEMINI_PROXY_URL (Play-Store-Build) wird KEIN Key eingebaut.
+run {
+    val envFile = rootProject.file("../.env")
+    if (!envFile.exists()) return@run
+
+    // Import oben nötig: im Gradle-Skript ist `java` die Java-Extension, nicht das Paket.
+    val decoder = Base64.getDecoder()
+    val encoder = Base64.getEncoder()
+    val existing = project.findProperty("dart-defines")?.toString()
+        ?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+    val existingNames = existing
+        .map { String(decoder.decode(it)).substringBefore("=").trim() }
+        .toSet()
+    if ("GEMINI_PROXY_URL" in existingNames) return@run
+
+    val fromEnv = envFile.readLines()
+        .map { it.removePrefix("﻿").trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+        .filter { it.substringBefore("=").trim() !in existingNames }
+        .map { encoder.encodeToString(it.toByteArray()) }
+
+    if (fromEnv.isNotEmpty()) {
+        project.extensions.extraProperties["dart-defines"] =
+            (existing + fromEnv).joinToString(",")
+    }
 }
 
 android {
