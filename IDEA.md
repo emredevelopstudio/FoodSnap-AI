@@ -5,6 +5,5 @@ FoodSnap AI ist eine plattformübergreifende mobile Tracking-App (Flutter/Dart &
 
 ## Kernaufgabe & Status
 - **Hauptfunktion:** Schnelles Erfassen von Mahlzeiten und Getränken mit automatischer Berechnung von Kalorien und Makronährstoffen.
-- **Vision-Pipeline:** Vollständig autonome, 100 % offline funktionierende Bilderkennung direkt auf dem Gerät ohne Cloud-APIs (kein Gemini, kein OpenAI).
-- **Aktuelle Architektur:** MediaPipe Tasks Vision (`tasks-vision`) auf Android via MethodChannel (`com.foodsnap.ai/vision` in `MainActivity.kt`), gekoppelt an den `LocalVisionService` in Dart.
-- **Aktuelles Problem:** Gescannte Bilder werden mangels passender Modellbindung oder Mapping-Eintrag noch als "Unbekanntes Lebensmittel" gewertet. Ziel ist die zuverlässige Erkennung von Standard-Lebensmitteln und Getränken (z. B. Wasserflaschen, Obst, Basismahlzeiten) und deren Zuordnung zu präzisen Nährwerten.
+- **Vision-Pipeline:** Fotoanalyse über die Google Gemini API (Direktaufruf per `--dart-define` im Dev-Build, Firebase-Proxy `functions/` für Release), mit Modell-Ausweichkette, Zeitlimits und Abbruch. Barcode-Scan über Open Food Facts.
+- **Aktuelle Architektur:** `GeminiVisionService` (lib/services/gemini_vision_service.dart). Die frühere Offline-Erkennung (MediaPipe/TFLite, `LocalVisionService`) wurde am 30.09.2026 entfernt, da ungenutzt.

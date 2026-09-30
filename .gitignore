@@ -69,13 +69,6 @@ GoogleService-Info.plist
 *.aab
 *.apk
 
-# ML-Modelle: nur die gebündelten Dateien in assets/models/ sind Quelle.
-# Keine Kopien im nativen Android-Asset-Ordner (würden doppelt ins APK wandern).
-/android/app/src/main/assets/models/
-/assets/models/*.task
-/assets/models/food_classifier.tflite
-/assets/models/mobilenet_food.tflite
-/assets/models/labels.txt
 
 # Cloud Functions
 /functions/node_modules/

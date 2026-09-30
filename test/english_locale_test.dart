@@ -9,7 +9,7 @@ import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:foodsnap_ai/l10n/app_localizations.dart';
 import 'package:foodsnap_ai/services/gemini_vision_service.dart';
-import 'package:foodsnap_ai/services/local_vision_service.dart';
+import 'helpers/test_meal.dart';
 import 'package:foodsnap_ai/views/scan_review_view.dart';
 
 Widget _en(Widget home) => ProviderScope(
@@ -31,8 +31,7 @@ void main() {
     tester.view.physicalSize = const Size(412, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    final meal = LocalVisionService.createMealEntry(
-        displayName: 'Pizza', calories: 266, confidence: 0.9, isRecognized: true);
+    final meal = testMeal();
 
     await tester.pumpWidget(_en(ScanReviewView(initialMeal: meal)));
 

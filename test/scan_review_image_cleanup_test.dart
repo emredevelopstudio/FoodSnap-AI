@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:foodsnap_ai/services/local_vision_service.dart';
+import 'helpers/test_meal.dart';
 import 'package:foodsnap_ai/views/scan_review_view.dart';
 
 void main() {
@@ -21,12 +21,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final meal = LocalVisionService.createMealEntry(
-      displayName: 'Pizza',
-      calories: 266,
-      confidence: 0.9,
-      isRecognized: true,
-    );
+    final meal = testMeal();
 
     await tester.pumpWidget(ProviderScope(
       child: MaterialApp(home: ScanReviewView(initialMeal: meal, imagePath: file.path)),

@@ -23,9 +23,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    androidResources {
-        noCompress += listOf("bin", "task", "tflite", "lite", "txt")
-    }
 
     defaultConfig {
         applicationId = "com.foodsnap.ai"
@@ -61,11 +58,6 @@ kotlin {
     }
 }
 
-dependencies {
-    // Offizielle Google LiteRT Runtime (modernes TFLite mit separaten Namespaces & 16KB Page Alignment):
-    implementation("com.google.ai.edge.litert:litert:1.4.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-}
 
 flutter {
     source = "../.."

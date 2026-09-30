@@ -24,7 +24,7 @@ dependencies:
   mobile_scanner: ^5.2.3
   http: ^1.2.2
   url_launcher: ^6.3.2
-  google_mlkit_text_recognition: ^0.13.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -35,11 +35,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/
-    # Nur tatsächlich geladene Modelle einzeln listen (kein Ordner-Wildcard,
-    # sonst landen Duplikate/README im Bundle). Kein .env mehr!
-    - assets/models/food_classifier_quant.tflite
-    - assets/models/food_labels.txt
-    - assets/models/nutrition_db.json
+    # Kein .env als Asset! Keys nur per --dart-define (siehe lib/core/config/api_keys.dart).
 
 flutter_launcher_icons:
   android: "launcher_icon"
