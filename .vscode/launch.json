@@ -7,6 +7,14 @@
       "type": "dart",
       "program": "lib/main.dart",
       "args": ["--dart-define-from-file=.env"]
+    },
+    {
+      "name": "FoodSnap AI (Release, Key aus .env)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "release",
+      "args": ["--dart-define-from-file=.env"]
     }
   ]
 }
