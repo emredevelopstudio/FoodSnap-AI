@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../models/meal_entry.dart';
 
 class MealCard extends StatelessWidget {
@@ -29,7 +30,7 @@ class MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final timeStr = '${DateFormat('HH:mm').format(meal.timestamp)} Uhr';
+    final timeStr = context.l10n.tr('${DateFormat('HH:mm').format(meal.timestamp)} Uhr', DateFormat('HH:mm').format(meal.timestamp));
 
     final cardBg = isDark ? theme.colorScheme.surface : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -58,15 +59,15 @@ class MealCard extends StatelessWidget {
           color: Colors.redAccent,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Löschen',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              context.l10n.tr('Löschen', 'Delete'),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
-            SizedBox(width: 8),
-            Icon(Icons.delete_outline, color: Colors.white, size: 24),
+            const SizedBox(width: 8),
+            const Icon(Icons.delete_outline, color: Colors.white, size: 24),
           ],
         ),
       ),
@@ -120,7 +121,7 @@ class MealCard extends StatelessWidget {
                       color: Color(0xFF10B981),
                       size: 19,
                     ),
-                    tooltip: 'Für Tag übernehmen',
+                    tooltip: context.l10n.tr('Für Tag übernehmen', 'Copy to day'),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: onDuplicate,
@@ -133,7 +134,7 @@ class MealCard extends StatelessWidget {
                       color: Color(0xFF64748B),
                       size: 20,
                     ),
-                    tooltip: 'Eintrag bearbeiten',
+                    tooltip: context.l10n.tr('Eintrag bearbeiten', 'Edit entry'),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: onEdit,
@@ -161,8 +162,8 @@ class MealCard extends StatelessWidget {
                       children: [
                         Text(
                           meal.items.isNotEmpty
-                              ? 'Enthaltene Zutaten (${meal.items.length}):'
-                              : 'Makronährstoffe:',
+                              ? context.l10n.tr('Enthaltene Zutaten (${meal.items.length}):', 'Ingredients (${meal.items.length}):')
+                              : context.l10n.tr('Makronährstoffe:', 'Macronutrients:'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -175,28 +176,28 @@ class MealCard extends StatelessWidget {
                             if (onDuplicate != null)
                               IconButton(
                                 icon: const Icon(Icons.copy_rounded, color: Color(0xFF10B981), size: 19),
-                                tooltip: 'Für Tag übernehmen',
+                                tooltip: context.l10n.tr('Für Tag übernehmen', 'Copy to day'),
                                 onPressed: onDuplicate,
                               ),
                             if (onEdit != null)
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined, color: Color(0xFF64748B), size: 20),
-                                tooltip: 'Eintrag bearbeiten',
+                                tooltip: context.l10n.tr('Eintrag bearbeiten', 'Edit entry'),
                                 onPressed: onEdit,
                               ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                              tooltip: 'Eintrag löschen',
+                              tooltip: context.l10n.tr('Eintrag löschen', 'Delete entry'),
                               onPressed: () {
                                 showDialog(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
-                                    title: const Text('Eintrag löschen'),
-                                    content: Text('Möchtest du "${meal.name}" wirklich entfernen?'),
+                                    title: Text(context.l10n.tr('Eintrag löschen', 'Delete entry')),
+                                    content: Text(context.l10n.tr('Möchtest du "${meal.name}" wirklich entfernen?', 'Do you really want to remove "${meal.name}"?')),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(ctx),
-                                        child: const Text('Abbrechen'),
+                                        child: Text(context.l10n.tr('Abbrechen', 'Cancel')),
                                       ),
                                       FilledButton(
                                         style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -204,7 +205,7 @@ class MealCard extends StatelessWidget {
                                           Navigator.pop(ctx);
                                           onDelete();
                                         },
-                                        child: const Text('Löschen'),
+                                        child: Text(context.l10n.tr('Löschen', 'Delete')),
                                       ),
                                     ],
                                   ),
@@ -224,7 +225,7 @@ class MealCard extends StatelessWidget {
                             const Icon(Icons.water_drop_outlined, size: 16, color: Color(0xFF0284C7)),
                             const SizedBox(width: 6),
                             Text(
-                              'Flüssigkeitsmenge: ${formatVolume(meal.amountMl!)} (${meal.amountMl} ml)',
+                              context.l10n.tr('Flüssigkeitsmenge: ${formatVolume(meal.amountMl!)} (${meal.amountMl} ml)', 'Liquid amount: ${formatVolume(meal.amountMl!)} (${meal.amountMl} ml)'),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -288,9 +289,9 @@ class MealCard extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _macroBadge('Kalorien', '${meal.calories} kcal', Colors.orange.shade800),
+                            _macroBadge(context.l10n.tr('Kalorien', 'Calories'), '${meal.calories} kcal', Colors.orange.shade800),
                             _macroBadge('Protein', '${meal.protein.toStringAsFixed(1)} g', const Color(0xFF1E88E5)),
-                            _macroBadge('Fett', '${meal.fat.toStringAsFixed(1)} g', Colors.purple.shade800),
+                            _macroBadge(context.l10n.tr('Fett', 'Fat'), '${meal.fat.toStringAsFixed(1)} g', Colors.purple.shade800),
                           ],
                         ),
                       ),

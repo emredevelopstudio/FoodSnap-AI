@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../l10n/app_localizations.dart';
 import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
 
@@ -35,7 +36,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text(message ?? 'FoodSnap AI Pro erfolgreich aktiviert!'),
+          content: Text(message ?? context.l10n.tr('FoodSnap AI Pro erfolgreich aktiviert!', 'FoodSnap AI Pro activated successfully!')),
           backgroundColor: const Color(0xFF10B981),
         ),
       );
@@ -99,8 +100,8 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
           debugPrint('>>> [DEBUG-KAUF-FEHLER] Weder Offering noch StoreProduct in Google Play gefunden!');
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Keine Upgrade-Angebote verfügbar.'),
+            SnackBar(
+              content: Text(context.l10n.tr('Keine Upgrade-Angebote verfügbar.', 'No upgrade offers available.')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -123,7 +124,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Kauf fehlgeschlagen: $e'),
+          content: Text(context.l10n.tr('Kauf fehlgeschlagen: $e', 'Purchase failed: $e')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -138,11 +139,11 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       if (isPremium || PurchaseService.isProUser) {
-        _onPurchaseSuccess(message: 'Deine Pro-Version wurde erfolgreich wiederhergestellt!');
+        _onPurchaseSuccess(message: context.l10n.tr('Deine Pro-Version wurde erfolgreich wiederhergestellt!', 'Your Pro version has been restored successfully!'));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Keine aktiven Käufe gefunden.'),
+          SnackBar(
+            content: Text(context.l10n.tr('Keine aktiven Käufe gefunden.', 'No active purchases found.')),
           ),
         );
       }
@@ -152,7 +153,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Wiederherstellung fehlgeschlagen: $e'),
+          content: Text(context.l10n.tr('Wiederherstellung fehlgeschlagen: $e', 'Restore failed: $e')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -214,7 +215,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
             const SizedBox(height: 8),
             Text(
               widget.customMessage ??
-                  'Schalte alle Premium-Features frei und genieße eine werbefreie Erfahrung.',
+                  context.l10n.tr('Schalte alle Premium-Features frei und genieße eine werbefreie Erfahrung.', 'Unlock all premium features and enjoy an ad-free experience.'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13.5,
@@ -223,11 +224,11 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildFeatureRow(Icons.all_inclusive_rounded, 'Unbegrenzte KI-Mahlzeiten-Scans'),
-            _buildFeatureRow(Icons.block_rounded, '100 % Werbefreiheit (keine Banner, keine Einblendungen)'),
-            _buildFeatureRow(Icons.bolt_rounded, 'Schnellere KI-Scan-Latenz & priorisierte Analysen'),
-            _buildFeatureRow(Icons.auto_graph_rounded, 'Detaillierte Nährwert- & Gesundheitsanalyse'),
-            _buildFeatureRow(Icons.cloud_done_outlined, 'Prioritäts-Serverzugang'),
+            _buildFeatureRow(Icons.all_inclusive_rounded, context.l10n.tr('Unbegrenzte KI-Mahlzeiten-Scans', 'Unlimited AI meal scans')),
+            _buildFeatureRow(Icons.block_rounded, context.l10n.tr('100 % Werbefreiheit (keine Banner, keine Einblendungen)', '100% ad-free (no banners, no pop-ups)')),
+            _buildFeatureRow(Icons.bolt_rounded, context.l10n.tr('Schnellere KI-Scan-Latenz & priorisierte Analysen', 'Faster AI scan latency & prioritized analysis')),
+            _buildFeatureRow(Icons.auto_graph_rounded, context.l10n.tr('Detaillierte Nährwert- & Gesundheitsanalyse', 'Detailed nutrition & health analysis')),
+            _buildFeatureRow(Icons.cloud_done_outlined, context.l10n.tr('Prioritäts-Serverzugang', 'Priority server access')),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -251,9 +252,9 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
                           strokeWidth: 2.5,
                         ),
                       )
-                    : const Text(
-                        'Jetzt für 2,99 € freischalten',
-                        style: TextStyle(
+                    : Text(
+                        context.l10n.tr('Jetzt für 2,99 € freischalten', 'Unlock now for €2.99'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -264,7 +265,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
             TextButton(
               onPressed: _isLoading ? null : _handleRestore,
               child: Text(
-                'Käufe wiederherstellen',
+                context.l10n.tr('Käufe wiederherstellen', 'Restore purchases'),
                 style: TextStyle(
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                   fontSize: 13,

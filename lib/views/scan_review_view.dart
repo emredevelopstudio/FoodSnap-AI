@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../l10n/app_localizations.dart';
 import '../models/meal_entry.dart';
 import '../models/meal_item.dart';
 import '../providers/meal_provider.dart';
@@ -98,7 +99,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
   void _addItem() {
     setState(() {
       _editableItems.add(_EditableItem(
-        nameCtrl: TextEditingController(text: 'Zusätzliche Zutat'),
+        nameCtrl: TextEditingController(text: context.l10n.tr('Zusätzliche Zutat', 'Extra ingredient')),
         weightCtrl: TextEditingController(text: '100'),
         caloriesCtrl: TextEditingController(text: '120'),
         proteinCtrl: TextEditingController(text: '8'),
@@ -122,7 +123,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
   void _saveMeal() {
     final finalItems = _editableItems.map((item) {
       return MealItem(
-        name: item.nameCtrl.text.trim().isEmpty ? 'Lebensmittel' : item.nameCtrl.text.trim(),
+        name: item.nameCtrl.text.trim().isEmpty ? context.l10n.tr('Lebensmittel', 'Food') : item.nameCtrl.text.trim(),
         estimatedWeightG: double.tryParse(item.weightCtrl.text) ?? 0.0,
         calories: double.tryParse(item.caloriesCtrl.text) ?? 0.0,
         proteinG: double.tryParse(item.proteinCtrl.text) ?? 0.0,
@@ -141,7 +142,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
       id: widget.initialMeal.id.isNotEmpty ? widget.initialMeal.id : const Uuid().v4(),
       name: enteredName.isNotEmpty
           ? enteredName
-          : (mlVal != null && _totalCalories == 0 ? 'Wasser' : 'Mahlzeit'),
+          : (mlVal != null && _totalCalories == 0 ? context.l10n.tr('Wasser', 'Water') : context.l10n.tr('Mahlzeit', 'Meal')),
       calories: _totalCalories.round(),
       protein: _totalProtein,
       carbs: _totalCarbs,
@@ -161,7 +162,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('"${savedMeal.name}" im Tagebuch gespeichert!'),
+        content: Text(context.l10n.tr('"${savedMeal.name}" im Tagebuch gespeichert!', '"${savedMeal.name}" saved to your diary!')),
         backgroundColor: const Color(0xFF10B981),
       ),
     );
@@ -177,17 +178,17 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Eintrag prüfen & anpassen'),
+        title: Text(context.l10n.tr('Eintrag prüfen & anpassen', 'Review & adjust entry')),
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Komponente hinzufügen',
+            tooltip: context.l10n.tr('Komponente hinzufügen', 'Add component'),
             onPressed: _addItem,
           ),
           IconButton(
             icon: const Icon(Icons.check),
-            tooltip: 'Speichern',
+            tooltip: context.l10n.tr('Speichern', 'Save'),
             onPressed: _saveMeal,
           ),
         ],
@@ -243,7 +244,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
           padding: const EdgeInsets.all(16),
           child: FilledButton.icon(
             icon: const Icon(Icons.save_rounded),
-            label: const Text('Mahlzeit in Tagebuch speichern', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            label: Text(context.l10n.tr('Mahlzeit in Tagebuch speichern', 'Save meal to diary'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),
               minimumSize: const Size.fromHeight(52),
@@ -303,7 +304,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Essen/Getränk nicht eindeutig erkannt',
+                  context.l10n.tr('Essen/Getränk nicht eindeutig erkannt', 'Food/drink not clearly recognized'),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13.5,
@@ -312,7 +313,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Passe die Angaben unten bitte bei Bedarf manuell an.',
+                  context.l10n.tr('Passe die Angaben unten bitte bei Bedarf manuell an.', 'Please adjust the details below manually if needed.'),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark
@@ -362,11 +363,11 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Flexible(
+                Flexible(
                   child: Text(
-                    'Gescannte Mahlzeit',
+                    context.l10n.tr('Gescannte Mahlzeit', 'Scanned meal'),
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
                 if (widget.initialMeal.healthScore > 0)
@@ -450,7 +451,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   ),
                 ],
                 Text(
-                  'Name des Eintrags',
+                  context.l10n.tr('Name des Eintrags', 'Entry name'),
                   style: TextStyle(
                     color: isDark ? Colors.grey.shade300 : const Color(0xFF475569),
                     fontWeight: FontWeight.w600,
@@ -463,7 +464,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     prefixIcon: const Icon(Icons.restaurant_menu, color: Color(0xFF10B981)),
-                    hintText: 'z.B. Rührei mit Gemüse oder Wasser',
+                    hintText: context.l10n.tr('z.B. Rührei mit Gemüse oder Wasser', 'e.g. scrambled eggs with vegetables, or water'),
                     isDense: true,
                   ),
                 ),
@@ -471,7 +472,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
 
                 // Gesamtgewicht (g)
                 Text(
-                  'Gesamtgewicht (optional)',
+                  context.l10n.tr('Gesamtgewicht (optional)', 'Total weight (optional)'),
                   style: TextStyle(
                     color: isDark ? Colors.grey.shade400 : const Color(0xFF10B981),
                     fontWeight: FontWeight.w600,
@@ -485,8 +486,8 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     prefixIcon: const Icon(Icons.scale_outlined, color: Color(0xFF10B981)),
-                    labelText: 'Gesamtgewicht (g)',
-                    hintText: 'z. B. 250 g',
+                    labelText: context.l10n.tr('Gesamtgewicht (g)', 'Total weight (g)'),
+                    hintText: context.l10n.tr('z. B. 250 g', 'e.g. 250 g'),
                     isDense: true,
                   ),
                   onChanged: (_) => setState(() {}),
@@ -495,7 +496,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
 
                 // Flüssigkeitsmenge
                 Text(
-                  'Flüssigkeitsmenge (optional für Getränke / Shakes / Wasser)',
+                  context.l10n.tr('Flüssigkeitsmenge (optional für Getränke / Shakes / Wasser)', 'Liquid amount (optional for drinks / shakes / water)'),
                   style: TextStyle(
                     color: isDark ? Colors.grey.shade400 : const Color(0xFF0284C7),
                     fontWeight: FontWeight.w600,
@@ -509,8 +510,8 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     prefixIcon: const Icon(Icons.water_drop_outlined, color: Color(0xFF0284C7)),
-                    labelText: 'Menge (ml)',
-                    hintText: 'z. B. 500 ml oder 1000 ml (1L)',
+                    labelText: context.l10n.tr('Menge (ml)', 'Amount (ml)'),
+                    hintText: context.l10n.tr('z. B. 500 ml oder 1000 ml (1L)', 'e.g. 500 ml or 1000 ml (1 L)'),
                     isDense: true,
                   ),
                   onChanged: (_) => setState(() {}),
@@ -552,11 +553,11 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
           ),
           child: Row(
             children: [
-              Expanded(child: _buildSummaryStat('Kalorien', '${_totalCalories.toStringAsFixed(0)} kcal', const Color(0xFF10B981))),
+              Expanded(child: _buildSummaryStat(context.l10n.tr('Kalorien', 'Calories'), '${_totalCalories.toStringAsFixed(0)} kcal', const Color(0xFF10B981))),
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
               Expanded(child: _buildSummaryStat('Protein', '${_totalProtein.toStringAsFixed(1)} g', const Color(0xFF3B82F6))),
               Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
-              Expanded(child: _buildSummaryStat('Fett', '${_totalFat.toStringAsFixed(1)} g', const Color(0xFFEF4444))),
+              Expanded(child: _buildSummaryStat(context.l10n.tr('Fett', 'Fat'), '${_totalFat.toStringAsFixed(1)} g', const Color(0xFFEF4444))),
             ],
           ),
         ),
@@ -571,13 +572,13 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Erkannte Komponenten (${_editableItems.length})',
+                    context.l10n.tr('Erkannte Komponenten (${_editableItems.length})', 'Detected components (${_editableItems.length})'),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                    'Tippe auf die Grammzahl zur schnellen Anpassung',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Text(
+                    context.l10n.tr('Tippe auf die Grammzahl zur schnellen Anpassung', 'Tap the gram amount to adjust it quickly'),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -585,7 +586,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
             const SizedBox(width: 8),
             TextButton.icon(
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Zutat +', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              label: Text(context.l10n.tr('Zutat +', 'Ingredient +'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               onPressed: _addItem,
             ),
           ],
@@ -684,18 +685,18 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   child: TextField(
                     controller: item.nameCtrl,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
-                      hintText: 'Bezeichnung der Zutat',
+                      hintText: context.l10n.tr('Bezeichnung der Zutat', 'Ingredient name'),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.grey, size: 18),
-                  tooltip: 'Komponente entfernen',
+                  tooltip: context.l10n.tr('Komponente entfernen', 'Remove component'),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () => _removeItem(index),
@@ -715,9 +716,9 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                 children: [
                   const Icon(Icons.scale_rounded, size: 16, color: Color(0xFF10B981)),
                   const SizedBox(width: 6),
-                  const Text(
-                    'Menge:',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+                  Text(
+                    context.l10n.tr('Menge:', 'Amount:'),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
                   ),
                   const SizedBox(width: 8),
 
@@ -921,7 +922,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Makros für "${item.nameCtrl.text}" feinjustieren',
+                context.l10n.tr('Makros für "${item.nameCtrl.text}" feinjustieren', 'Fine-tune macros for "${item.nameCtrl.text}"'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 14),
@@ -931,9 +932,9 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                     child: TextField(
                       controller: item.caloriesCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Kalorien (kcal)',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.tr('Kalorien (kcal)', 'Calories (kcal)'),
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
                       onChanged: (_) {
@@ -967,9 +968,9 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                     child: TextField(
                       controller: item.fatCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Fett (g)',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.tr('Fett (g)', 'Fat (g)'),
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
                       onChanged: (_) {
@@ -991,7 +992,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
                   Navigator.pop(ctx);
                   setState(() {});
                 },
-                child: const Text('Übernehmen'),
+                child: Text(context.l10n.tr('Übernehmen', 'Apply')),
               ),
             ],
           ),

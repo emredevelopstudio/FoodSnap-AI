@@ -66,8 +66,8 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           debugPrint('>>> [DEBUG-KAUF-FEHLER] Keine Upgrade-Angebote oder Produkte in Google Play verfügbar.');
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Keine Upgrade-Angebote verfügbar.'),
+            SnackBar(
+              content: Text(context.l10n.tr('Keine Upgrade-Angebote verfügbar.', 'No upgrade offers available.')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -79,9 +79,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       if (success || PurchaseService.isProUser) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vielen Dank! FoodSnap AI Pro wurde erfolgreich aktiviert.'),
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            content: Text(context.l10n.tr('Vielen Dank! FoodSnap AI Pro wurde erfolgreich aktiviert.', 'Thank you! FoodSnap AI Pro has been activated.')),
+            backgroundColor: const Color(0xFF10B981),
           ),
         );
       }
@@ -90,7 +90,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Upgrade fehlgeschlagen: $e'),
+          content: Text(context.l10n.tr('Upgrade fehlgeschlagen: $e', 'Upgrade failed: $e')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -108,15 +108,15 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       if (isPremium || PurchaseService.isProUser) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Deine Pro-Version wurde erfolgreich wiederhergestellt!'),
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            content: Text(context.l10n.tr('Deine Pro-Version wurde erfolgreich wiederhergestellt!', 'Your Pro version has been restored successfully!')),
+            backgroundColor: const Color(0xFF10B981),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Keine aktiven Käufe gefunden.'),
+          SnackBar(
+            content: Text(context.l10n.tr('Keine aktiven Käufe gefunden.', 'No active purchases found.')),
           ),
         );
       }
@@ -125,7 +125,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       setState(() => _isRestoringPurchases = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fehler bei der Wiederherstellung: $e'),
+          content: Text(context.l10n.tr('Fehler bei der Wiederherstellung: $e', 'Restore failed: $e')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -293,11 +293,11 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                           ),
                         ),
                         title: Text(
-                          isPro ? 'FoodSnap AI Pro aktiv' : 'FoodSnap AI Pro freischalten',
+                          isPro ? context.l10n.tr('FoodSnap AI Pro aktiv', 'FoodSnap AI Pro active') : context.l10n.tr('FoodSnap AI Pro freischalten', 'Unlock FoodSnap AI Pro'),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15.5),
                         ),
                         subtitle: Text(
-                          isPro ? 'Werbung dauerhaft deaktiviert' : 'Keine Werbung & unbegrenzte Features',
+                          isPro ? context.l10n.tr('Werbung dauerhaft deaktiviert', 'Ads permanently disabled') : context.l10n.tr('Keine Werbung & unbegrenzte Features', 'No ads & unlimited features'),
                           style: TextStyle(
                             fontSize: 12.5,
                             color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -341,9 +341,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                             size: 20,
                           ),
                         ),
-                        title: const Text(
-                          'Käufe wiederherstellen',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        title: Text(
+                          context.l10n.tr('Käufe wiederherstellen', 'Restore purchases'),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         trailing: _isRestoringPurchases
                             ? const SizedBox(
@@ -598,9 +598,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       l10n.t('privacy_policy'),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
-                    subtitle: const Text(
-                      'Informationen zur Datenverarbeitung & KI-Nutzung',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    subtitle: Text(
+                      context.l10n.tr('Informationen zur Datenverarbeitung & KI-Nutzung', 'Information on data processing & AI usage'),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     trailing: const Icon(Icons.open_in_new_rounded, size: 18, color: Colors.grey),
                     onTap: () => PrivacyConsentDialog.openPrivacyPolicy(context),
@@ -687,7 +687,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
           if (kDebugMode) ...[
             const SizedBox(height: 24),
-            _buildSectionHeader('Entwickler-Optionen', isDark ? Colors.amber.shade400 : Colors.amber.shade800),
+            _buildSectionHeader(context.l10n.tr('Entwickler-Optionen', 'Developer options'), isDark ? Colors.amber.shade400 : Colors.amber.shade800),
             const SizedBox(height: 8),
             Card(
               color: cardBg,

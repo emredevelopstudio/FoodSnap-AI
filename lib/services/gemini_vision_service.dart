@@ -300,8 +300,9 @@ class GeminiVisionService {
   }
 
   /// Einstiegspunkt für den Foto-Scan im Dashboard.
-  Future<MealEntry> analyzeMeal(String imagePath, {ScanCancellation? cancel}) =>
-      analyzeFoodImage(filePath: imagePath, cancel: cancel);
+  Future<MealEntry> analyzeMeal(String imagePath,
+          {ScanCancellation? cancel, bool english = false}) =>
+      analyzeFoodImage(filePath: imagePath, cancel: cancel, english: english);
 
   /// Zeitlimit pro Modell-Anfrage und harte Obergrenze für den gesamten Scan.
   static const Duration perModelTimeout = Duration(seconds: 20);
@@ -310,6 +311,9 @@ class GeminiVisionService {
   static const String timeoutMessage =
       'Die Analyse hat zu lange gedauert. Bitte prüfe deine Verbindung und versuche es erneut.';
 
+  static const String notConfiguredMessage =
+      'Die KI-Analyse ist in dieser Version nicht konfiguriert.';
+
   Future<MealEntry> analyzeFoodImage({
     String? filePath,
     Uint8List? imageBytes,
@@ -317,6 +321,7 @@ class GeminiVisionService {
     void Function(String status)? onStatusUpdate,
     ScanCancellation? cancel,
     Duration perModelTimeout = perModelTimeout,
+    bool english = false,
     Duration scanDeadline = scanDeadline,
   }) async {
     final deadline = DateTime.now().add(scanDeadline);
@@ -339,7 +344,7 @@ class GeminiVisionService {
     if (!isConfigured) {
       throw ScanAnalysisException(kDebugMode
           ? 'Kein Gemini-Key: App mit --dart-define-from-file=.env starten.'
-          : 'Die KI-Analyse ist in dieser Version nicht konfiguriert.');
+          : notConfiguredMessage);
     }
 
     final compressed =
@@ -352,7 +357,7 @@ class GeminiVisionService {
       'contents': [
         {
           'parts': [
-            {'text': _mealPrompt},
+            {'text': english ? '$_mealPrompt$_englishOutputRule' : _mealPrompt},
             {
               'inline_data': {
                 'mime_type': finalMimeType,
@@ -512,6 +517,14 @@ class GeminiVisionService {
     throw const FormatException(
         'Die KI-Antwort ist unvollständig oder ungültig. Bitte erneut scannen.');
   }
+
+  /// Englische App: Texte auf Englisch, Kategorie bleibt ein fester deutscher Wert
+  /// (Filter im Verlauf und Anzeige-Übersetzung hängen daran).
+  static const String _englishOutputRule = '''
+
+SPRACHE DER ANTWORT:
+Schreibe "meal_name", alle "name"-Felder in "items" und "health_reason" auf ENGLISCH.
+"health_category" bleibt exakt einer der Werte "Gesund", "Ausgewogen" oder "Fast Food / Cheat".''';
 
   static const String _mealPrompt = '''
 Du bist ein präziser Ernährungs-, Lebensmittel- und Computer-Vision-Experte.

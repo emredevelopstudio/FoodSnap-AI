@@ -95,7 +95,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                     NavigationRailDestination(
                       icon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                       selectedIcon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                      label: const Text('Fasten'),
+                      label: Text(context.l10n.tr('Fasten', 'Fasting')),
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.calculate_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
@@ -150,7 +150,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                       NavigationDestination(
                         icon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                         selectedIcon: Icon(Icons.hourglass_bottom_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                        label: 'Fasten',
+                        label: context.l10n.tr('Fasten', 'Fasting'),
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.calculate_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),

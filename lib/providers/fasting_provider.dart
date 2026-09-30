@@ -10,49 +10,73 @@ enum FastingPlan {
     fastHours: 12,
     eatHours: 12,
     displayName: '12:12',
+    displayNameEn: '12:12',
     tagline: 'Sanft / Einsteiger',
+    taglineEn: 'Gentle / Beginner',
     description: 'Optimal für den Einstieg in das Intervallfasten.',
+    descriptionEn: 'Ideal for getting started with intermittent fasting.',
     badge: 'Für Einsteiger',
+    badgeEn: 'For beginners',
   ),
   plan14_10(
     fastHours: 14,
     eatHours: 10,
     displayName: '14:10',
+    displayNameEn: '14:10',
     tagline: 'Moderat',
+    taglineEn: 'Moderate',
     description: 'Sanfte Fettverbrennung mit ausreichendem Essensfenster.',
+    descriptionEn: 'Gentle fat burning with a generous eating window.',
     badge: 'Sanfte Fettverbrennung',
+    badgeEn: 'Gentle fat burning',
   ),
   plan16_8(
     fastHours: 16,
     eatHours: 8,
     displayName: '16:8',
+    displayNameEn: '16:8',
     tagline: 'Standard / Fettabbau',
+    taglineEn: 'Standard / Fat loss',
     description: 'Der beliebteste Allrounder für effektive Fettverbrennung.',
+    descriptionEn: 'The most popular all-rounder for effective fat burning.',
     badge: 'Bester Allrounder',
+    badgeEn: 'Best all-rounder',
   ),
   plan18_6(
     fastHours: 18,
     eatHours: 6,
     displayName: '18:6',
+    displayNameEn: '18:6',
     tagline: 'Fortgeschritten',
+    taglineEn: 'Advanced',
     description: 'Für erfahrene Faster mit intensiver Ketose.',
+    descriptionEn: 'For experienced fasters, with deep ketosis.',
     badge: 'Intensive Ketose',
+    badgeEn: 'Deep ketosis',
   ),
   plan20_4(
     fastHours: 20,
     eatHours: 4,
     displayName: '20:4',
+    displayNameEn: '20:4',
     tagline: 'Krieger-Diät / Intensiv',
+    taglineEn: 'Warrior diet / Intense',
     description: 'Warrior-Fasten für maximale Autophagie und Fettabbau.',
+    descriptionEn: 'Warrior fasting for maximum autophagy and fat loss.',
     badge: 'Maximale Autophagie',
+    badgeEn: 'Maximum autophagy',
   ),
   custom(
     fastHours: 16,
     eatHours: 8,
     displayName: 'Individuell',
+    displayNameEn: 'Custom',
     tagline: 'Benutzerdefiniert',
+    taglineEn: 'Custom',
     description: 'Passe Fasten- und Essensfenster flexibel an.',
+    descriptionEn: 'Adjust fasting and eating windows freely.',
     badge: 'Benutzerdefiniert',
+    badgeEn: 'Custom',
   );
 
   final int fastHours;
@@ -61,6 +85,15 @@ enum FastingPlan {
   final String tagline;
   final String description;
   final String badge;
+  final String displayNameEn;
+  final String taglineEn;
+  final String descriptionEn;
+  final String badgeEn;
+
+  String localizedName(bool en) => en ? displayNameEn : displayName;
+  String localizedTagline(bool en) => en ? taglineEn : tagline;
+  String localizedDescription(bool en) => en ? descriptionEn : description;
+  String localizedBadge(bool en) => en ? badgeEn : badge;
 
   const FastingPlan({
     required this.fastHours,
@@ -69,6 +102,10 @@ enum FastingPlan {
     required this.tagline,
     required this.description,
     required this.badge,
+    required this.displayNameEn,
+    required this.taglineEn,
+    required this.descriptionEn,
+    required this.badgeEn,
   });
 
   static FastingPlan fromHours(int fastHours) {
@@ -281,6 +318,35 @@ class FastingProvider extends ChangeNotifier {
     } else {
       return "Autophagie & Zellregeneration! Beschädigte Zellen und Proteine werden abgebaut und erneuert.";
     }
+  }
+
+  /// Phase in der App-Sprache (die Getter oben liefern Deutsch).
+  String stageTitle(bool en) {
+    if (!en) return currentStage;
+    final hours = elapsed.inMinutes / 60.0;
+    if (hours < 4) return 'Blood sugar is normalizing';
+    if (hours < 8) return 'Digestion rests, blood sugar drops';
+    if (hours < 12) return 'Fat burning begins';
+    if (hours < 16) return 'Ketosis & fat loss active';
+    return 'Autophagy & cell renewal';
+  }
+
+  String stageDescription(bool en) {
+    if (!en) return currentStageDescription;
+    final hours = elapsed.inMinutes / 60.0;
+    if (hours < 4) {
+      return 'Insulin levels are falling. Your body is digesting your last meal and processing nutrients.';
+    }
+    if (hours < 8) {
+      return 'Your digestive tract is resting. Blood sugar levels are stabilizing.';
+    }
+    if (hours < 12) {
+      return 'The glycogen stores in your liver are emptying. Your body is switching to burning fat.';
+    }
+    if (hours < 16) {
+      return 'Ketosis is active. Fat is broken down into ketone bodies that fuel your brain and muscles.';
+    }
+    return 'Autophagy & cell renewal! Damaged cells and proteins are broken down and renewed.';
   }
 
   /// Passendes Icon für die aktuelle Phase

@@ -67,7 +67,7 @@ class DashboardView extends ConsumerWidget {
         await ProUpgradeSheet.show(
           context,
           customMessage:
-              'Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.',
+              context.l10n.tr('Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.', 'You\'ve reached your daily limit of 5 free scans! Get FoodSnap AI Pro for unlimited scans and a 100% ad-free experience – or wait until tomorrow.'),
         );
         return;
       }
@@ -92,7 +92,7 @@ class DashboardView extends ConsumerWidget {
         await ProUpgradeSheet.show(
           context,
           customMessage:
-              'Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.',
+              context.l10n.tr('Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.', 'You\'ve reached your daily limit of 5 free scans! Get FoodSnap AI Pro for unlimited scans and a 100% ad-free experience – or wait until tomorrow.'),
         );
         return;
       }
@@ -120,15 +120,15 @@ class DashboardView extends ConsumerWidget {
                       color: Color(0xFF10B981),
                     ),
                     const SizedBox(height: 18),
-                    const Text(
-                      'Foto wird gescannt...',
+                    Text(
+                      context.l10n.tr('Foto wird gescannt...', 'Scanning photo...'),
                       style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                          const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: cancellation.cancel,
-                      child: const Text('Abbrechen'),
+                      child: Text(context.l10n.tr('Abbrechen', 'Cancel')),
                     ),
                   ],
                 ),
@@ -140,7 +140,8 @@ class DashboardView extends ConsumerWidget {
       loadingNavigator.push(loadingRoute!);
 
       final analysisFuture =
-          geminiVisionService.analyzeMeal(image.path, cancel: cancellation);
+          geminiVisionService.analyzeMeal(image.path,
+              cancel: cancellation, english: context.l10n.isEn);
 
       savedImage = ImageStorageService.saveImagePermanently(image.path);
 
@@ -184,8 +185,26 @@ class DashboardView extends ConsumerWidget {
       debugPrint('[SCAN PIPELINE ERROR]: $e');
       debugPrint('[SCAN STACKTRACE]: $stackTrace');
 
+      final l10n = context.l10n;
       final String errorText;
-      if (e is FormatException) {
+      if (l10n.isEn) {
+        // Service-Meldungen sind deutsch → für Englisch nach Fehlertyp übersetzen
+        if (e is ScanRateLimitException) {
+          errorText = 'Image recognition is busy right now. Please try again in a minute.';
+        } else if (e is ScanAnalysisException &&
+            e.customMessage == GeminiVisionService.timeoutMessage) {
+          errorText = 'The analysis took too long. Please check your connection and try again.';
+        } else if (e is ScanAnalysisException &&
+            e.customMessage == GeminiVisionService.notConfiguredMessage) {
+          errorText = 'AI analysis is not configured in this version.';
+        } else if (e is FormatException) {
+          errorText = 'The AI response was incomplete or invalid. Please scan again.';
+        } else if (e is FileSystemException) {
+          errorText = 'The image file could not be read.';
+        } else {
+          errorText = 'Analysis failed. Please try again.';
+        }
+      } else if (e is FormatException) {
         errorText = e.message;
       } else if (e is FileSystemException) {
         errorText = e.message;
@@ -236,7 +255,7 @@ class DashboardView extends ConsumerWidget {
       ProUpgradeSheet.show(
         context,
         customMessage:
-            'Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.',
+            context.l10n.tr('Du hast dein tägliches Limit von 5 kostenlosen Scans erreicht! Hol dir FoodSnap AI Pro für unbegrenzte Scans und eine 100 % werbefreie Nutzung – oder warte bis morgen.', 'You\'ve reached your daily limit of 5 free scans! Get FoodSnap AI Pro for unlimited scans and a 100% ad-free experience – or wait until tomorrow.'),
       );
       return;
     }
@@ -273,7 +292,7 @@ class DashboardView extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Text(
-                  'Mahlzeit erfassen',
+                  context.l10n.tr('Mahlzeit erfassen', 'Log a meal'),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
@@ -310,7 +329,7 @@ class DashboardView extends ConsumerWidget {
                   ),
                 ),
                 title: Text(
-                  'Foto aufnehmen',
+                  context.l10n.tr('Foto aufnehmen', 'Take photo'),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -318,7 +337,7 @@ class DashboardView extends ConsumerWidget {
                   ),
                 ),
                 subtitle: Text(
-                  'Mahlzeit live fotografieren',
+                  context.l10n.tr('Mahlzeit live fotografieren', 'Photograph your meal now'),
                   style: TextStyle(
                     fontSize: 12.5,
                     color: isDark
@@ -367,7 +386,7 @@ class DashboardView extends ConsumerWidget {
                   ),
                 ),
                 title: Text(
-                  'Aus Album wählen',
+                  context.l10n.tr('Aus Album wählen', 'Choose from album'),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -375,7 +394,7 @@ class DashboardView extends ConsumerWidget {
                   ),
                 ),
                 subtitle: Text(
-                  'Bild aus der Galerie importieren',
+                  context.l10n.tr('Bild aus der Galerie importieren', 'Import an image from your gallery'),
                   style: TextStyle(
                     fontSize: 12.5,
                     color: isDark
@@ -480,7 +499,7 @@ class DashboardView extends ConsumerWidget {
                   color: Color(0xFF64748B),
                   size: 22,
                 ),
-                tooltip: 'Datum wählen',
+                tooltip: context.l10n.tr('Datum wählen', 'Choose date'),
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -784,7 +803,7 @@ class DashboardView extends ConsumerWidget {
                     const Icon(Icons.edit_note_rounded, color: Color(0xFF10B981), size: 24),
                     const SizedBox(width: 8),
                     Text(
-                      'Mahlzeit bearbeiten',
+                      context.l10n.tr('Mahlzeit bearbeiten', 'Edit meal'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -795,7 +814,7 @@ class DashboardView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Passe Name, Kalorien, Nährwerte oder Menge nachträglich an.',
+                  context.l10n.tr('Passe Name, Kalorien, Nährwerte oder Menge nachträglich an.', 'Adjust the name, calories, nutrients or amount afterwards.'),
                   style: TextStyle(
                     color: isDark ? Colors.white60 : Colors.grey.shade600,
                     fontSize: 13,
@@ -805,7 +824,7 @@ class DashboardView extends ConsumerWidget {
                 TextFormField(
                   controller: nameController,
                   decoration: InputDecoration(
-                    labelText: 'Mahlzeit-Name',
+                    labelText: context.l10n.tr('Mahlzeit-Name', 'Meal name'),
                     prefixIcon: const Icon(Icons.restaurant, size: 20),
                     filled: true,
                     fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8FAFC),
@@ -851,14 +870,14 @@ class DashboardView extends ConsumerWidget {
                         const Icon(Icons.access_time_rounded, size: 20, color: Color(0xFF10B981)),
                         const SizedBox(width: 12),
                         Text(
-                          'Uhrzeit: ',
+                          context.l10n.tr('Uhrzeit: ', 'Time: '),
                           style: TextStyle(
                             fontSize: 15,
                             color: isDark ? Colors.white60 : Colors.grey.shade600,
                           ),
                         ),
                         Text(
-                          '${DateFormat('HH:mm').format(selectedTimestamp)} Uhr',
+                          context.l10n.tr('${DateFormat('HH:mm').format(selectedTimestamp)} Uhr', DateFormat('HH:mm').format(selectedTimestamp)),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -883,7 +902,7 @@ class DashboardView extends ConsumerWidget {
                         controller: calController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Kalorien',
+                          labelText: context.l10n.tr('Kalorien', 'Calories'),
                           suffixText: 'kcal',
                           prefixIcon: const Icon(Icons.local_fire_department, size: 20, color: Color(0xFF10B981)),
                           filled: true,
@@ -923,7 +942,7 @@ class DashboardView extends ConsumerWidget {
                         controller: fatController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
-                          labelText: 'Fett',
+                          labelText: context.l10n.tr('Fett', 'Fat'),
                           suffixText: 'g',
                           prefixIcon: const Icon(Icons.opacity, size: 20, color: Color(0xFFEF4444)),
                           filled: true,
@@ -945,7 +964,7 @@ class DashboardView extends ConsumerWidget {
                         controller: weightGramsController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Gesamtgewicht',
+                          labelText: context.l10n.tr('Gesamtgewicht', 'Total weight'),
                           suffixText: 'g',
                           prefixIcon: const Icon(Icons.scale, size: 20, color: Color(0xFF8B5CF6)),
                           filled: true,
@@ -963,7 +982,7 @@ class DashboardView extends ConsumerWidget {
                         controller: amountMlController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Flüssigkeit',
+                          labelText: context.l10n.tr('Flüssigkeit', 'Liquid'),
                           suffixText: 'ml',
                           prefixIcon: const Icon(Icons.water_drop_outlined, size: 20, color: Color(0xFF0284C7)),
                           filled: true,
@@ -988,7 +1007,7 @@ class DashboardView extends ConsumerWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     icon: const Icon(Icons.copy_rounded, size: 18),
-                    label: const Text('Kopie für heute / anderen Tag erstellen'),
+                    label: Text(context.l10n.tr('Kopie für heute / anderen Tag erstellen', 'Create a copy for today / another day')),
                     onPressed: () {
                       Navigator.pop(ctx);
                       _showDuplicateMealSheet(context, ref, meal);
@@ -1002,7 +1021,7 @@ class DashboardView extends ConsumerWidget {
                       child: TextButton(
                         onPressed: () => Navigator.pop(ctx),
                         child: Text(
-                          'Abbrechen',
+                          context.l10n.tr('Abbrechen', 'Cancel'),
                           style: TextStyle(color: isDark ? Colors.white60 : Colors.grey.shade700),
                         ),
                       ),
@@ -1017,7 +1036,7 @@ class DashboardView extends ConsumerWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         icon: const Icon(Icons.check),
-                        label: const Text('Änderungen speichern'),
+                        label: Text(context.l10n.tr('Änderungen speichern', 'Save changes')),
                         onPressed: () async {
                           final newName = nameController.text.trim().isEmpty ? meal.name : nameController.text.trim();
                           final newCal = int.tryParse(calController.text.trim()) ?? meal.calories;
@@ -1043,9 +1062,9 @@ class DashboardView extends ConsumerWidget {
                           if (context.mounted) {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Mahlzeit erfolgreich aktualisiert'),
-                                duration: Duration(seconds: 2),
+                              SnackBar(
+                                content: Text(context.l10n.tr('Mahlzeit erfolgreich aktualisiert', 'Meal updated successfully')),
+                                duration: const Duration(seconds: 2),
                               ),
                             );
                           }
@@ -1112,7 +1131,7 @@ class DashboardView extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Mahlzeit übernehmen',
+                          context.l10n.tr('Mahlzeit übernehmen', 'Copy meal'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -1137,8 +1156,8 @@ class DashboardView extends ConsumerWidget {
                   foregroundColor: Colors.white,
                   child: Icon(Icons.today_rounded, size: 20),
                 ),
-                title: const Text('Für heute übernehmen', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Heute, ${DateFormat('dd.MM.yyyy').format(now)} (${DateFormat('HH:mm').format(now)} Uhr)'),
+                title: Text(context.l10n.tr('Für heute übernehmen', 'Copy to today'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(context.l10n.tr('Heute, ${DateFormat('dd.MM.yyyy').format(now)} (${DateFormat('HH:mm').format(now)} Uhr)', 'Today, ${DateFormat('dd.MM.yyyy').format(now)} (${DateFormat('HH:mm').format(now)})')),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: isDark ? const Color(0xFF262626) : const Color(0xFFF8FAFC),
                 onTap: () async {
@@ -1154,7 +1173,7 @@ class DashboardView extends ConsumerWidget {
                     foregroundColor: const Color(0xFF0284C7),
                     child: const Icon(Icons.event_available_rounded, size: 20),
                   ),
-                  title: const Text('Für ausgewähltes Datum übernehmen', style: TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(context.l10n.tr('Für ausgewähltes Datum übernehmen', 'Copy to selected date'), style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(selectedDate)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   tileColor: isDark ? const Color(0xFF262626) : const Color(0xFFF8FAFC),
@@ -1171,8 +1190,8 @@ class DashboardView extends ConsumerWidget {
                   foregroundColor: isDark ? Colors.white70 : Colors.black87,
                   child: const Icon(Icons.calendar_month_outlined, size: 20),
                 ),
-                title: const Text('Anderes Datum wählen...', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Freie Auswahl im Kalender'),
+                title: Text(context.l10n.tr('Anderes Datum wählen...', 'Choose another date...'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(context.l10n.tr('Freie Auswahl im Kalender', 'Pick any day in the calendar')),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: isDark ? const Color(0xFF262626) : const Color(0xFFF8FAFC),
                 onTap: () async {
@@ -1238,7 +1257,7 @@ class DashboardView extends ConsumerWidget {
       final dateStr = DateFormat('dd.MM.').format(targetDate);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ "${meal.name}" für $dateStr hinzugefügt!'),
+          content: Text(context.l10n.tr('✓ "${meal.name}" für $dateStr hinzugefügt!', '✓ "${meal.name}" added for $dateStr!')),
           backgroundColor: const Color(0xFF10B981),
           duration: const Duration(seconds: 2),
         ),
@@ -1339,7 +1358,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
                 size: 20,
                 color: Color(0xFF0284C7),
               ),
-              tooltip: 'Flüssigkeit anpassen',
+              tooltip: context.l10n.tr('Flüssigkeit anpassen', 'Adjust liquid'),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => _showWaterDialog(context, ref, waterMl),
@@ -1392,13 +1411,13 @@ class _CreatineTrackerCard extends ConsumerWidget {
       builder: (ctx) => DisposeOnUnmount(disposables: [controller], child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: isDarkCard ? const Color(0xFF1E1E1E) : Colors.white,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.water_drop_rounded, color: Color(0xFF0284C7), size: 22),
-            SizedBox(width: 8),
+            const Icon(Icons.water_drop_rounded, color: Color(0xFF0284C7), size: 22),
+            const SizedBox(width: 8),
             Text(
-              'Flüssigkeit anpassen',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              context.l10n.tr('Flüssigkeit anpassen', 'Adjust liquid'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
           ],
         ),
@@ -1407,7 +1426,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Wähle oder tippe die gewünschte Wassermenge (ml) für dein tägliches Creatin ein:',
+              context.l10n.tr('Wähle oder tippe die gewünschte Wassermenge (ml) für dein tägliches Creatin ein:', 'Choose or enter the amount of water (ml) for your daily creatine:'),
               style: TextStyle(
                 fontSize: 13,
                 color: isDarkCard ? Colors.white70 : Colors.grey.shade700,
@@ -1419,7 +1438,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
               keyboardType: TextInputType.number,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Menge in ml',
+                labelText: context.l10n.tr('Menge in ml', 'Amount in ml'),
                 suffixText: 'ml',
                 prefixIcon: const Icon(Icons.local_drink_outlined, size: 20, color: Color(0xFF0284C7)),
                 filled: true,
@@ -1453,7 +1472,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              'Abbrechen',
+              context.l10n.tr('Abbrechen', 'Cancel'),
               style: TextStyle(color: isDarkCard ? Colors.white60 : Colors.grey.shade700),
             ),
           ),
@@ -1475,14 +1494,14 @@ class _CreatineTrackerCard extends ConsumerWidget {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Creatin-Wassermenge auf $newMl ml angepasst.'),
+                      content: Text(context.l10n.tr('Creatin-Wassermenge auf $newMl ml angepasst.', 'Creatine water amount set to $newMl ml.')),
                       duration: const Duration(seconds: 2),
                     ),
                   );
                 }
               }
             },
-            child: const Text('Speichern'),
+            child: Text(context.l10n.tr('Speichern', 'Save')),
           ),
         ],
       )),
@@ -1491,6 +1510,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
 
   Future<void> _toggleCreatine(BuildContext context, WidgetRef ref, bool isTaken, bool hasCreatineMeal) async {
     final nextState = !isTaken;
+    final l10n = context.l10n; // vor dem await lesen
     await HiveService.setCreatineTaken(selectedDate, nextState);
 
     if (nextState) {
@@ -1498,7 +1518,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
         final currentWaterMl = ref.read(creatineWaterProvider);
         final creatineMeal = MealEntry(
           id: const Uuid().v4(),
-          name: 'Creatin Monohydrat (5g)',
+          name: l10n.tr('Creatin Monohydrat (5g)', 'Creatine monohydrate (5g)'),
           calories: 0,
           protein: 0,
           carbs: 0,
@@ -1507,16 +1527,16 @@ class _CreatineTrackerCard extends ConsumerWidget {
           timestamp: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, 8, 0),
           healthScore: 10,
           healthCategory: 'Gesund',
-          healthReason: 'Unterstützt die zelluläre ATP-Regeneration und Kraftleistung.',
+          healthReason: l10n.tr('Unterstützt die zelluläre ATP-Regeneration und Kraftleistung.', 'Supports cellular ATP regeneration and strength performance.'),
         );
         await ref.read(mealListProvider.notifier).addMeal(creatineMeal);
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Creatin (5g) für heute als eingenommen markiert!'),
-            backgroundColor: Color(0xFF10B981),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(context.l10n.tr('✓ Creatin (5g) für heute als eingenommen markiert!', '✓ Creatine (5g) marked as taken for today!')),
+            backgroundColor: const Color(0xFF10B981),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -1528,9 +1548,9 @@ class _CreatineTrackerCard extends ConsumerWidget {
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Creatin-Einnahme für heute zurückgenommen.'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(context.l10n.tr('Creatin-Einnahme für heute zurückgenommen.', 'Creatine intake for today undone.')),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -1559,10 +1579,10 @@ class _FastingDashboardCard extends ConsumerWidget {
         : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E8F0));
 
     final title =
-        'Intervallfasten (${fasting.targetFastingHours}:${fasting.targetEatingHours})';
+        context.l10n.tr('Intervallfasten (${fasting.targetFastingHours}:${fasting.targetEatingHours})', 'Intermittent fasting (${fasting.targetFastingHours}:${fasting.targetEatingHours})');
     final subtitle = isActive
-        ? 'Läuft · ${fasting.elapsed.inHours}h ${fasting.elapsed.inMinutes.remainder(60)}m / ${fasting.targetFastingHours}h'
-        : 'Nicht aktiv · Tippe zum Starten';
+        ? context.l10n.tr('Läuft · ${fasting.elapsed.inHours}h ${fasting.elapsed.inMinutes.remainder(60)}m / ${fasting.targetFastingHours}h', 'Running · ${fasting.elapsed.inHours}h ${fasting.elapsed.inMinutes.remainder(60)}m / ${fasting.targetFastingHours}h')
+        : context.l10n.tr('Nicht aktiv · Tippe zum Starten', 'Not active · Tap to start');
 
     return InkWell(
       onTap: () {

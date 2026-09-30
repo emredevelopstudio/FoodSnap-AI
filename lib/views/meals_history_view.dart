@@ -80,7 +80,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
               color: Color(0xFF64748B),
               size: 22,
             ),
-            tooltip: 'Datum wählen',
+            tooltip: context.l10n.tr('Datum wählen', 'Choose date'),
             onPressed: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -232,7 +232,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
               setState(() => _filterByDate = !_filterByDate);
             },
             child: Text(
-              _filterByDate ? (l10n.isEn ? 'All' : 'Alle') : (l10n.isEn ? 'Filter' : 'Nach Datum'),
+              _filterByDate ? (l10n.isEn ? 'All' : 'Alle') : (l10n.isEn ? 'Filter' : context.l10n.tr('Nach Datum', 'By date')),
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
@@ -433,21 +433,21 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
               Icon(Icons.calendar_today_outlined, size: 54, color: Colors.grey.shade400),
               const SizedBox(height: 16),
               Text(
-                'Keine Mahlzeiten für $formatted',
+                context.l10n.tr('Keine Mahlzeiten für $formatted', 'No meals for $formatted'),
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Du kannst Mahlzeiten von anderen Tagen mit dem Kopieren-Icon hierher übernehmen oder nach weiteren Tagen filtern.',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
+              Text(
+                context.l10n.tr('Du kannst Mahlzeiten von anderen Tagen mit dem Kopieren-Icon hierher übernehmen oder nach weiteren Tagen filtern.', 'You can copy meals from other days here with the copy icon, or filter for more days.'),
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
               TextButton.icon(
                 icon: const Icon(Icons.history_rounded),
                 onPressed: () => setState(() => _filterByDate = false),
-                label: const Text('Alle Tage anzeigen'),
+                label: Text(context.l10n.tr('Alle Tage anzeigen', 'Show all days')),
               ),
             ],
           ),
@@ -543,11 +543,13 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
 
     String title;
     if (day == today) {
-      title = 'Heute (${DateFormat('d. MMMM', 'de_DE').format(day)})';
+      title = context.l10n.tr('Heute (${DateFormat('d. MMMM', 'de_DE').format(day)})', 'Today (${DateFormat('MMMM d', 'en_US').format(day)})');
     } else if (day == yesterday) {
-      title = 'Gestern (${DateFormat('d. MMMM', 'de_DE').format(day)})';
+      title = context.l10n.tr('Gestern (${DateFormat('d. MMMM', 'de_DE').format(day)})', 'Yesterday (${DateFormat('MMMM d', 'en_US').format(day)})');
     } else {
-      title = DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(day);
+      title = context.l10n.isEn
+          ? DateFormat('EEEE, MMMM d, yyyy', 'en_US').format(day)
+          : DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(day);
     }
 
     return Padding(
@@ -589,7 +591,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
     MealEntry meal,
     bool isDark,
   ) {
-    final timeStr = '${DateFormat('HH:mm').format(meal.timestamp)} Uhr';
+    final timeStr = context.l10n.tr('${DateFormat('HH:mm').format(meal.timestamp)} Uhr', DateFormat('HH:mm').format(meal.timestamp));
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final hasWeight = meal.weightGrams != null && meal.weightGrams! > 0;
     final hasMl = meal.amountMl != null && meal.amountMl! > 0;
@@ -654,17 +656,17 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.copy_rounded, size: 20, color: Color(0xFF10B981)),
-                        tooltip: 'Für Tag übernehmen / Duplizieren',
+                        tooltip: context.l10n.tr('Für Tag übernehmen / Duplizieren', 'Copy to day / duplicate'),
                         onPressed: () => _showDuplicateMealSheet(context, ref, meal),
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF64748B)),
-                        tooltip: 'Mahlzeit anpassen',
+                        tooltip: context.l10n.tr('Mahlzeit anpassen', 'Edit meal'),
                         onPressed: () => _showEditMealSheet(context, ref, meal),
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                        tooltip: 'Löschen',
+                        tooltip: context.l10n.tr('Löschen', 'Delete'),
                         onPressed: () => _confirmDelete(context, ref, meal),
                       ),
                     ],
@@ -756,7 +758,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
           Icon(Icons.star_rounded, size: 14, color: badgeColor),
           const SizedBox(width: 4),
           Text(
-            '★ $score/10 - $category',
+            '★ $score/10 - ${context.l10n.healthCategory(category)}',
             style: TextStyle(
               color: textColor,
               fontWeight: FontWeight.bold,
@@ -888,26 +890,26 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.tune_rounded, color: Color(0xFF10B981)),
-                        SizedBox(width: 8),
+                        const Icon(Icons.tune_rounded, color: Color(0xFF10B981)),
+                        const SizedBox(width: 8),
                         Text(
-                          'Mahlzeit anpassen',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          context.l10n.tr('Mahlzeit anpassen', 'Edit meal'),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Korrigiere fehlerhafte Erkennungen oder passe Mengen & Nährwerte an.',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    Text(
+                      context.l10n.tr('Korrigiere fehlerhafte Erkennungen oder passe Mengen & Nährwerte an.', 'Correct wrong detections or adjust amounts & nutrients.'),
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: nameController,
                       decoration: InputDecoration(
-                        labelText: 'Name der Mahlzeit',
+                        labelText: context.l10n.tr('Name der Mahlzeit', 'Meal name'),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: const Icon(Icons.fastfood_outlined),
                       ),
@@ -939,13 +941,13 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       borderRadius: BorderRadius.circular(12),
                       child: InputDecorator(
                         decoration: InputDecoration(
-                          labelText: 'Uhrzeit',
+                          labelText: context.l10n.tr('Uhrzeit', 'Time'),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           prefixIcon: const Icon(Icons.access_time_rounded, color: Color(0xFF10B981)),
                           suffixIcon: const Icon(Icons.edit_calendar_rounded, size: 20),
                         ),
                         child: Text(
-                          '${DateFormat('HH:mm').format(selectedTimestamp)} Uhr',
+                          context.l10n.tr('${DateFormat('HH:mm').format(selectedTimestamp)} Uhr', DateFormat('HH:mm').format(selectedTimestamp)),
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                         ),
                       ),
@@ -957,8 +959,8 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       controller: weightGramsController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        labelText: 'Gesamtgewicht (g)',
-                        hintText: 'z. B. 250 g',
+                        labelText: context.l10n.tr('Gesamtgewicht (g)', 'Total weight (g)'),
+                        hintText: context.l10n.tr('z. B. 250 g', 'e.g. 250 g'),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: const Icon(Icons.scale_outlined, color: Color(0xFF10B981)),
                       ),
@@ -970,8 +972,8 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       controller: amountMlController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        labelText: 'Menge (ml)',
-                        hintText: 'z. B. 500 ml oder 1000 ml (1L)',
+                        labelText: context.l10n.tr('Menge (ml)', 'Amount (ml)'),
+                        hintText: context.l10n.tr('z. B. 500 ml oder 1000 ml (1L)', 'e.g. 500 ml or 1000 ml (1 L)'),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: const Icon(Icons.water_drop_outlined, color: Color(0xFF0284C7)),
                       ),
@@ -985,7 +987,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                             controller: calController,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'Kalorien (kcal)',
+                              labelText: context.l10n.tr('Kalorien (kcal)', 'Calories (kcal)'),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               prefixIcon: const Icon(Icons.local_fire_department_outlined),
                             ),
@@ -1013,7 +1015,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                             controller: fatController,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             decoration: InputDecoration(
-                              labelText: 'Fett (g)',
+                              labelText: context.l10n.tr('Fett (g)', 'Fat (g)'),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               prefixIcon: const Icon(Icons.opacity_outlined),
                             ),
@@ -1032,7 +1034,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         icon: const Icon(Icons.copy_rounded, size: 18),
-                        label: const Text('Kopie für heute / anderen Tag erstellen'),
+                        label: Text(context.l10n.tr('Kopie für heute / anderen Tag erstellen', 'Create a copy for today / another day')),
                         onPressed: () {
                           Navigator.pop(ctx);
                           _showDuplicateMealSheet(context, ref, meal);
@@ -1049,7 +1051,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Abbrechen'),
+                            child: Text(context.l10n.tr('Abbrechen', 'Cancel')),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1062,7 +1064,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             icon: const Icon(Icons.check),
-                            label: const Text('Änderungen speichern'),
+                            label: Text(context.l10n.tr('Änderungen speichern', 'Save changes')),
                             onPressed: () async {
                               final newName = nameController.text.trim().isEmpty
                                   ? meal.name
@@ -1096,9 +1098,9 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                               if (context.mounted) {
                                 Navigator.pop(ctx);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Mahlzeit erfolgreich aktualisiert'),
-                                    duration: Duration(seconds: 2),
+                                  SnackBar(
+                                    content: Text(context.l10n.tr('Mahlzeit erfolgreich aktualisiert', 'Meal updated successfully')),
+                                    duration: const Duration(seconds: 2),
                                   ),
                                 );
                               }
@@ -1165,7 +1167,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Mahlzeit übernehmen',
+                          context.l10n.tr('Mahlzeit übernehmen', 'Copy meal'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -1190,8 +1192,8 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                   foregroundColor: Colors.white,
                   child: Icon(Icons.today_rounded, size: 20),
                 ),
-                title: const Text('Für heute übernehmen', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Heute, ${DateFormat('dd.MM.yyyy').format(now)} (${DateFormat('HH:mm').format(now)} Uhr)'),
+                title: Text(context.l10n.tr('Für heute übernehmen', 'Copy to today'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(context.l10n.tr('Heute, ${DateFormat('dd.MM.yyyy').format(now)} (${DateFormat('HH:mm').format(now)} Uhr)', 'Today, ${DateFormat('dd.MM.yyyy').format(now)} (${DateFormat('HH:mm').format(now)})')),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: isDark ? const Color(0xFF262626) : const Color(0xFFF8FAFC),
                 onTap: () async {
@@ -1207,7 +1209,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                     foregroundColor: const Color(0xFF0284C7),
                     child: const Icon(Icons.event_available_rounded, size: 20),
                   ),
-                  title: const Text('Für ausgewähltes Datum übernehmen', style: TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(context.l10n.tr('Für ausgewähltes Datum übernehmen', 'Copy to selected date'), style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(selectedDate)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   tileColor: isDark ? const Color(0xFF262626) : const Color(0xFFF8FAFC),
@@ -1224,8 +1226,8 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                   foregroundColor: isDark ? Colors.white70 : Colors.black87,
                   child: const Icon(Icons.calendar_month_outlined, size: 20),
                 ),
-                title: const Text('Anderes Datum wählen...', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Freie Auswahl im Kalender'),
+                title: Text(context.l10n.tr('Anderes Datum wählen...', 'Choose another date...'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(context.l10n.tr('Freie Auswahl im Kalender', 'Pick any day in the calendar')),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: isDark ? const Color(0xFF262626) : const Color(0xFFF8FAFC),
                 onTap: () async {
@@ -1291,7 +1293,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
       final dateStr = DateFormat('dd.MM.').format(targetDate);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ "${meal.name}" für $dateStr hinzugefügt!'),
+          content: Text(context.l10n.tr('✓ "${meal.name}" für $dateStr hinzugefügt!', '✓ "${meal.name}" added for $dateStr!')),
           backgroundColor: const Color(0xFF10B981),
           duration: const Duration(seconds: 2),
         ),
@@ -1303,12 +1305,12 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Mahlzeit löschen?'),
-        content: Text('Möchtest du "${meal.name}" wirklich unwiderruflich löschen?'),
+        title: Text(context.l10n.tr('Mahlzeit löschen?', 'Delete meal?')),
+        content: Text(context.l10n.tr('Möchtest du "${meal.name}" wirklich unwiderruflich löschen?', 'Do you really want to delete "${meal.name}" permanently?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.tr('Abbrechen', 'Cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -1318,13 +1320,13 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('"${meal.name}" gelöscht'),
+                    content: Text(context.l10n.tr('"${meal.name}" gelöscht', '"${meal.name}" deleted')),
                     duration: const Duration(seconds: 2),
                   ),
                 );
               }
             },
-            child: const Text('Löschen'),
+            child: Text(context.l10n.tr('Löschen', 'Delete')),
           ),
         ],
       ),
@@ -1350,12 +1352,12 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
     // 2. Mindestanforderung prüfen: Mindestens 3 verschiedene Mahlzeiten erforderlich
     if (distinctMeals.length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Scanne noch mindestens 3–4 Mahlzeiten ein, damit die App daraus einen Tagesplan zusammenstellen kann.',
+            context.l10n.tr('Scanne noch mindestens 3–4 Mahlzeiten ein, damit die App daraus einen Tagesplan zusammenstellen kann.', 'Scan at least 3–4 more meals so the app can build a daily plan from them.'),
           ),
           backgroundColor: Colors.orange,
-          duration: Duration(seconds: 4),
+          duration: const Duration(seconds: 4),
         ),
       );
       return;
@@ -1457,8 +1459,8 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
     final matchPercentage = ((calAcc * 0.7 + protAcc * 0.3) * 100).round();
 
     final slotLabels = plan.length == 3
-        ? ['🌅 Frühstück', '☀️ Mittagessen', '🌙 Abendessen']
-        : ['🌅 Frühstück', '☀️ Mittagessen', '🍎 Nachmittags-Snack', '🌙 Abendessen'];
+        ? [context.l10n.tr('🌅 Frühstück', '🌅 Breakfast'), context.l10n.tr('☀️ Mittagessen', '☀️ Lunch'), context.l10n.tr('🌙 Abendessen', '🌙 Dinner')]
+        : [context.l10n.tr('🌅 Frühstück', '🌅 Breakfast'), context.l10n.tr('☀️ Mittagessen', '☀️ Lunch'), context.l10n.tr('🍎 Nachmittags-Snack', '🍎 Afternoon snack'), context.l10n.tr('🌙 Abendessen', '🌙 Dinner')];
 
     final slotHours = plan.length == 3 ? [8, 13, 19] : [8, 12, 16, 19];
 
@@ -1504,17 +1506,17 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                         child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF10B981), size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Dein Tagesplan aus deinen Mahlzeiten',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                              context.l10n.tr('Dein Tagesplan aus deinen Mahlzeiten', 'Your daily plan from your meals'),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                             ),
                             Text(
-                              'Zusammengestellt aus deinen echten getrackten Speisen',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                              context.l10n.tr('Zusammengestellt aus deinen echten getrackten Speisen', 'Built from the meals you actually tracked'),
+                              style: const TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                           ],
                         ),
@@ -1547,7 +1549,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  '$totalPlanCal / ${targetCal.toInt()} kcal • ${totalPlanProt.round()} / ${targetProt.toInt()}g Protein - $matchPercentage% Match',
+                                  context.l10n.tr('$totalPlanCal / ${targetCal.toInt()} kcal • ${totalPlanProt.round()} / ${targetProt.toInt()}g Protein - $matchPercentage% Match', '$totalPlanCal / ${targetCal.toInt()} kcal • ${totalPlanProt.round()} / ${targetProt.toInt()}g protein - $matchPercentage% match'),
                                   style: TextStyle(
                                     color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46),
                                     fontWeight: FontWeight.bold,
@@ -1564,9 +1566,9 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _buildPlanMetric(
-                              'Kalorien',
+                              context.l10n.tr('Kalorien', 'Calories'),
                               '$totalPlanCal kcal',
-                              'Ziel: ${targetCal.toInt()} kcal',
+                              context.l10n.tr('Ziel: ${targetCal.toInt()} kcal', 'Goal: ${targetCal.toInt()} kcal'),
                               (totalPlanCal - targetCal).round(),
                               const Color(0xFF10B981),
                             ),
@@ -1574,7 +1576,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                             _buildPlanMetric(
                               'Protein',
                               '${totalPlanProt.round()} g',
-                              'Ziel: ${targetProt.toInt()} g',
+                              context.l10n.tr('Ziel: ${targetProt.toInt()} g', 'Goal: ${targetProt.toInt()} g'),
                               (totalPlanProt - targetProt).round(),
                               const Color(0xFF3B82F6),
                             ),
@@ -1598,7 +1600,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                                   ],
                                 ),
                                 const SizedBox(height: 2),
-                                const Text('Ø Qualität', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                Text(context.l10n.tr('Ø Qualität', 'Ø quality'), style: const TextStyle(fontSize: 10, color: Colors.grey)),
                               ],
                             ),
                           ],
@@ -1607,9 +1609,9 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Empfohlene Mahlzeiten-Aufteilung:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  Text(
+                    context.l10n.tr('Empfohlene Mahlzeiten-Aufteilung:', 'Recommended meal split:'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   const SizedBox(height: 12),
                   // Aufzählung der Mahlzeiten mit echtem Nutzerfoto
@@ -1692,9 +1694,9 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: const Icon(Icons.playlist_add_check_rounded, size: 22),
-                    label: const Text(
-                      'Diesen Plan für heute übernehmen',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    label: Text(
+                      context.l10n.tr('Diesen Plan für heute übernehmen', 'Use this plan for today'),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     onPressed: () async {
                       final now = DateTime.now();
@@ -1713,7 +1715,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              '✨ ${plan.length} Mahlzeiten wurden erfolgreich für heute übernommen!',
+                              context.l10n.tr('✨ ${plan.length} Mahlzeiten wurden erfolgreich für heute übernommen!', '✨ ${plan.length} meals were added for today!'),
                             ),
                             backgroundColor: const Color(0xFF10B981),
                             duration: const Duration(seconds: 3),
@@ -1729,7 +1731,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Schließen'),
+                    child: Text(context.l10n.tr('Schließen', 'Close')),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -1761,7 +1763,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
         ),
         const SizedBox(height: 2),
         Text(
-          diff == 0 ? 'Exakt' : diffSign,
+          diff == 0 ? context.l10n.tr('Exakt', 'Exact') : diffSign,
           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: diffColor),
         ),
       ],

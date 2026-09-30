@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../l10n/app_localizations.dart';
 import '../services/barcode_nutrition_service.dart';
 import '../views/manual_entry_view.dart';
 import '../views/scan_review_view.dart';
@@ -72,15 +73,15 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
         );
         return;
       } else {
-        _showErrorSnackBar('Produkt nicht in Datenbank gefunden');
+        _showErrorSnackBar(context.l10n.tr('Produkt nicht in Datenbank gefunden', 'Product not found in database'));
       }
     } on BarcodeNetworkException catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar(e.message);
+      _showErrorSnackBar(context.l10n.tr(e.message, 'Slow network, please enter manually'));
     } catch (e, stack) {
       if (!mounted) return;
       debugPrint('[BarcodeScannerScreen] Unerwarteter Fehler: $e\n$stack');
-      _showErrorSnackBar('Produkt nicht in Datenbank gefunden');
+      _showErrorSnackBar(context.l10n.tr('Produkt nicht in Datenbank gefunden', 'Product not found in database'));
     } finally {
       // State-Reset bei Fehler / nicht gefundenem Produkt:
       // Scanner wieder reaktivieren, Nutzer bleibt nie im Ladekreis stecken
@@ -106,7 +107,7 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
         backgroundColor: Colors.redAccent,
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
-          label: 'Manuell eintragen',
+          label: context.l10n.tr('Manuell eintragen', 'Add manually'),
           textColor: Colors.white,
           onPressed: () {
             Navigator.of(context).pushReplacement(
@@ -130,9 +131,9 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Barcode scannen',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.tr('Barcode scannen', 'Scan barcode'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -140,7 +141,7 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
               _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
               color: _isTorchOn ? Colors.amber : Colors.white,
             ),
-            tooltip: 'Taschenlampe umschalten',
+            tooltip: context.l10n.tr('Taschenlampe umschalten', 'Toggle flashlight'),
             onPressed: () async {
               try {
                 await _controller.toggleTorch();
@@ -186,26 +187,26 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(
+                        const CircularProgressIndicator(
                           color: Color(0xFF10B981),
                         ),
-                        SizedBox(height: 18),
+                        const SizedBox(height: 18),
                         Text(
-                          'Produktdaten werden geladen...',
-                          style: TextStyle(
+                          context.l10n.tr('Produktdaten werden geladen...', 'Loading product data...'),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
                         ),
-                        SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         Text(
-                          'Open Food Facts Datenbank',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          context.l10n.tr('Open Food Facts Datenbank', 'Open Food Facts database'),
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -232,14 +233,14 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
             color: Colors.black.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.qr_code_scanner, color: Color(0xFF10B981), size: 18),
-              SizedBox(width: 8),
+              const Icon(Icons.qr_code_scanner, color: Color(0xFF10B981), size: 18),
+              const SizedBox(width: 8),
               Text(
-                'Barcode im Rahmen platzieren',
-                style: TextStyle(
+                context.l10n.tr('Barcode im Rahmen platzieren', 'Place the barcode inside the frame'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -276,9 +277,9 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
           padding: const EdgeInsets.only(bottom: 36, left: 24, right: 24),
           child: OutlinedButton.icon(
             icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
-            label: const Text(
-              'Manuell eintragen',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            label: Text(
+              context.l10n.tr('Manuell eintragen', 'Add manually'),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.white38),

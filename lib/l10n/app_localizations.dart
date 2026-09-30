@@ -16,6 +16,29 @@ class AppLocalizations {
 
   bool get isEn => locale.languageCode == 'en';
 
+  /// Inline-Übersetzung für einmalig genutzte UI-Texte: `l10n.tr('Speichern', 'Save')`.
+  /// Häufig genutzte Begriffe gehören weiterhin in [_localizedValues].
+  String tr(String de, String en) => isEn ? en : de;
+
+  /// Gesundheits-Kategorie wird deutsch gespeichert (Filter hängen daran) und nur
+  /// für die Anzeige übersetzt.
+  String healthCategory(String category) {
+    if (!isEn) return category;
+    switch (category) {
+      case 'Gesund':
+      case 'Sehr gesund':
+        return 'Healthy';
+      case 'Ausgewogen':
+        return 'Balanced';
+      case 'Fast Food / Cheat':
+        return 'Fast food / cheat';
+      case 'Unbekannt':
+        return 'Unknown';
+      default:
+        return category;
+    }
+  }
+
   static final Map<String, Map<String, String>> _localizedValues = {
     'de': {
       // Navigation

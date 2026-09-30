@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/fasting_provider.dart';
 import '../widgets/dispose_on_unmount.dart';
 
@@ -28,7 +29,7 @@ class FastingView extends ConsumerWidget {
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
-          'Intervallfasten',
+          context.l10n.tr('Intervallfasten', 'Intermittent fasting'),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -132,7 +133,7 @@ class FastingView extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Ziel: ${fasting.targetFastingHours} Std. (${fasting.selectedPlan.displayName})',
+                              context.l10n.tr('Ziel: ${fasting.targetFastingHours} Std. (${fasting.selectedPlan.displayName})', 'Goal: ${fasting.targetFastingHours} h (${fasting.selectedPlan.localizedName(true)})'),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -142,7 +143,7 @@ class FastingView extends ConsumerWidget {
                             if (fasting.isFasting) ...[
                               const SizedBox(height: 4),
                               Text(
-                                '${(fasting.progress * 100).toInt()}% erreicht',
+                                context.l10n.tr('${(fasting.progress * 100).toInt()}% erreicht', '${(fasting.progress * 100).toInt()}% reached'),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -172,9 +173,9 @@ class FastingView extends ConsumerWidget {
                             ),
                             onPressed: () => _confirmStopFasting(context, ref),
                             icon: const Icon(Icons.stop_rounded, size: 22),
-                            label: const Text(
-                              'Fasten beenden',
-                              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
+                            label: Text(
+                              context.l10n.tr('Fasten beenden', 'End fast'),
+                              style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
                             ),
                           )
                         : ElevatedButton.icon(
@@ -190,9 +191,9 @@ class FastingView extends ConsumerWidget {
                               ref.read(fastingProvider.notifier).startFasting();
                             },
                             icon: const Icon(Icons.play_arrow_rounded, size: 24),
-                            label: const Text(
-                              'Fasten jetzt starten',
-                              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
+                            label: Text(
+                              context.l10n.tr('Fasten jetzt starten', 'Start fasting now'),
+                              style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
                             ),
                           ),
                   ),
@@ -253,7 +254,7 @@ class FastingView extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Aktuelle Phase',
+                              context.l10n.tr('Aktuelle Phase', 'Current phase'),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -262,7 +263,7 @@ class FastingView extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              fasting.currentStage,
+                              fasting.stageTitle(context.l10n.isEn),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -276,7 +277,7 @@ class FastingView extends ConsumerWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    fasting.currentStageDescription,
+                    fasting.stageDescription(context.l10n.isEn),
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.45,
@@ -290,7 +291,7 @@ class FastingView extends ConsumerWidget {
 
             // 4. Plan-Auswahl
             Text(
-              'Fasten-Pläne',
+              context.l10n.tr('Fasten-Pläne', 'Fasting plans'),
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -330,13 +331,13 @@ class FastingView extends ConsumerWidget {
     final diff = fasting.weightDifference;
     String diffSubtitle;
     if (diff == null) {
-      diffSubtitle = 'Tippe auf den Stift, um dein Gewicht zu erfassen';
+      diffSubtitle = context.l10n.tr('Tippe auf den Stift, um dein Gewicht zu erfassen', 'Tap the pencil to log your weight');
     } else if (diff > 0) {
-      diffSubtitle = 'Noch ${diff.toStringAsFixed(1)} kg bis zum Zielgewicht';
+      diffSubtitle = context.l10n.tr('Noch ${diff.toStringAsFixed(1)} kg bis zum Zielgewicht', '${diff.toStringAsFixed(1)} kg to your goal weight');
     } else if (diff < 0) {
-      diffSubtitle = '${diff.abs().toStringAsFixed(1)} kg unter dem Ziel';
+      diffSubtitle = context.l10n.tr('${diff.abs().toStringAsFixed(1)} kg unter dem Ziel', '${diff.abs().toStringAsFixed(1)} kg below your goal');
     } else {
-      diffSubtitle = 'Zielgewicht erreicht! 🎉';
+      diffSubtitle = context.l10n.tr('Zielgewicht erreicht! 🎉', 'Goal weight reached! 🎉');
     }
 
     return Container(
@@ -377,7 +378,7 @@ class FastingView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Zielgewicht-Tracking',
+                      context.l10n.tr('Zielgewicht-Tracking', 'Goal weight tracking'),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -412,7 +413,7 @@ class FastingView extends ConsumerWidget {
                 onPressed: () => _showWeightEditSheet(context, ref, fasting),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 color: isDark ? Colors.white70 : const Color(0xFF334155),
-                tooltip: 'Gewicht anpassen',
+                tooltip: context.l10n.tr('Gewicht anpassen', 'Edit weight'),
               ),
             ],
           ),
@@ -431,7 +432,7 @@ class FastingView extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               _buildWeightPillar(
-                title: 'Aktuell',
+                title: context.l10n.tr('Aktuell', 'Current'),
                 weightText: fasting.currentWeight != null
                     ? '${fasting.currentWeight!.toStringAsFixed(1)} kg'
                     : '--',
@@ -441,7 +442,7 @@ class FastingView extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               _buildWeightPillar(
-                title: 'Ziel',
+                title: context.l10n.tr('Ziel', 'Goal'),
                 weightText: fasting.targetWeight != null
                     ? '${fasting.targetWeight!.toStringAsFixed(1)} kg'
                     : '--',
@@ -469,11 +470,11 @@ class FastingView extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Fortschritt',
+                context.l10n.tr('Fortschritt', 'Progress'),
                 style: TextStyle(fontSize: 11.5, color: subtextColor),
               ),
               Text(
-                '${(fasting.weightProgress * 100).toInt()}% erreicht',
+                context.l10n.tr('${(fasting.weightProgress * 100).toInt()}% erreicht', '${(fasting.weightProgress * 100).toInt()}% reached'),
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.bold,
@@ -608,7 +609,7 @@ class FastingView extends ConsumerWidget {
                     ),
                     child: Center(
                       child: Text(
-                        plan.displayName,
+                        plan.localizedName(context.l10n.isEn),
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
@@ -627,7 +628,7 @@ class FastingView extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              plan.tagline,
+                              plan.localizedTagline(context.l10n.isEn),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14.5,
@@ -644,7 +645,7 @@ class FastingView extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                plan.badge,
+                                plan.localizedBadge(context.l10n.isEn),
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -656,7 +657,7 @@ class FastingView extends ConsumerWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${plan.fastHours}h Fasten · ${plan.eatHours}h Essen · ${plan.description}',
+                          context.l10n.tr('${plan.fastHours}h Fasten · ${plan.eatHours}h Essen · ${plan.description}', '${plan.fastHours}h fasting · ${plan.eatHours}h eating · ${plan.descriptionEn}'),
                           style: TextStyle(
                             fontSize: 12,
                             color: subtextColor,
@@ -736,7 +737,7 @@ class FastingView extends ConsumerWidget {
                 ),
               ),
               Text(
-                'Gewicht anpassen',
+                context.l10n.tr('Gewicht anpassen', 'Edit weight'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -745,7 +746,7 @@ class FastingView extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Trage dein aktuelles Gewicht und dein persönliches Zielgewicht ein.',
+                context.l10n.tr('Trage dein aktuelles Gewicht und dein persönliches Zielgewicht ein.', 'Enter your current weight and your personal goal weight.'),
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 18),
@@ -755,7 +756,7 @@ class FastingView extends ConsumerWidget {
                 controller: currentController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Aktuelles Gewicht (kg)',
+                  labelText: context.l10n.tr('Aktuelles Gewicht (kg)', 'Current weight (kg)'),
                   prefixIcon: const Icon(Icons.speed_rounded),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -767,7 +768,7 @@ class FastingView extends ConsumerWidget {
                 controller: targetController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Zielgewicht (kg)',
+                  labelText: context.l10n.tr('Zielgewicht (kg)', 'Goal weight (kg)'),
                   prefixIcon: const Icon(Icons.flag_outlined),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -779,7 +780,7 @@ class FastingView extends ConsumerWidget {
                 controller: startController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Startgewicht (kg, optional)',
+                  labelText: context.l10n.tr('Startgewicht (kg, optional)', 'Starting weight (kg, optional)'),
                   prefixIcon: const Icon(Icons.history_rounded),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -809,9 +810,9 @@ class FastingView extends ConsumerWidget {
                     }
                     Navigator.pop(ctx);
                   },
-                  child: const Text(
-                    'Speichern',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  child: Text(
+                    context.l10n.tr('Speichern', 'Save'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -827,17 +828,17 @@ class FastingView extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Fasten beenden?',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.tr('Fasten beenden?', 'End fast?'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'Möchtest du deine aktuelle Fastenphase wirklich beenden und in das Essensfenster wechseln?',
+        content: Text(
+          context.l10n.tr('Möchtest du deine aktuelle Fastenphase wirklich beenden und in das Essensfenster wechseln?', 'Do you really want to end your current fast and switch to your eating window?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.tr('Abbrechen', 'Cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -850,7 +851,7 @@ class FastingView extends ConsumerWidget {
               Navigator.pop(ctx);
               ref.read(fastingProvider.notifier).stopFasting();
             },
-            child: const Text('Ja, beenden'),
+            child: Text(context.l10n.tr('Ja, beenden', 'Yes, end it')),
           ),
         ],
       ),
