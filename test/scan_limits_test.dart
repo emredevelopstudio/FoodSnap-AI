@@ -120,5 +120,23 @@ void main() {
     expect(HiveService.isDarkMode(), isTrue);
     expect(HiveService.getThemeMode(), ThemeMode.dark);
   });
-}
 
+  test('alter Zählerstand (alte Keys) sperrt einen neuen Tag nicht', () async {
+    // Zustand wie nach Abbruch mitten im alten Reset: Datum heute, Zähler voll
+    await Hive.box<Map>(HiveService.settingsBoxName)
+        .put('daily_scan_date', {'date': '2026-09-30'});
+    await Hive.box<Map>(HiveService.settingsBoxName)
+        .put('daily_scans_count', {'count': 5});
+    final today = DateTime(2026, 9, 30);
+    expect(HiveService.getDailyScansCount(today), 0);
+    expect(HiveService.hasFreeScansRemaining(today), isTrue);
+  });
+
+  test('parallele Scans verlieren keinen Zählschritt', () async {
+    final today = DateTime(2026, 9, 30);
+    await Future.wait(
+        List.generate(5, (_) => HiveService.incrementDailyScansCount(today)));
+    expect(HiveService.getDailyScansCount(today), 5);
+    expect(HiveService.hasFreeScansRemaining(today), isFalse);
+  });
+}

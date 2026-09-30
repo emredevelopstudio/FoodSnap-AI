@@ -42,6 +42,16 @@ class DashboardView extends ConsumerWidget {
       loadingRoute = null;
     }
 
+    // Dauerhaft gespeichertes Foto wieder löschen, wenn es nicht in der Prüfansicht landet
+    // (Analyse fehlgeschlagen / Screen verlassen) – sonst bleibt es unsichtbar liegen.
+    Future<String>? savedImage;
+    void discardSavedImage() {
+      savedImage
+          ?.then((path) => ImageStorageService.deleteImage(path))
+          .catchError((Object _) {});
+      savedImage = null;
+    }
+
     try {
       if (!HiveService.hasAcceptedPrivacy()) {
         final accepted = await PrivacyConsentDialog.show(context);
@@ -120,15 +130,17 @@ class DashboardView extends ConsumerWidget {
 
       final analysisFuture = geminiVisionService.analyzeMeal(image.path);
 
-      final results = await Future.wait<dynamic>([
-        analysisFuture,
-        ImageStorageService.saveImagePermanently(image.path),
-      ]);
+      savedImage = ImageStorageService.saveImagePermanently(image.path);
+
+      final results = await Future.wait<dynamic>([analysisFuture, savedImage!]);
 
       final meal = results[0] as MealEntry;
       final localImagePath = results[1] as String;
 
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        discardSavedImage();
+        return;
+      }
       closeLoadingDialog();
 
       // Jeder erfolgreiche Scan erhöht den Zähler um 1 (nur bei Nicht-Pro-Nutzern)
@@ -136,7 +148,10 @@ class DashboardView extends ConsumerWidget {
         await HiveService.incrementDailyScansCount();
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        discardSavedImage();
+        return;
+      }
 
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -147,6 +162,7 @@ class DashboardView extends ConsumerWidget {
         ),
       );
     } catch (e, stackTrace) {
+      discardSavedImage();
       if (!context.mounted) return;
       closeLoadingDialog();
 

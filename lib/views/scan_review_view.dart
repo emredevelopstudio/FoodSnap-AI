@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../models/meal_item.dart';
 import '../providers/meal_provider.dart';
+import '../services/image_storage_service.dart';
 
 class ScanReviewView extends ConsumerStatefulWidget {
   final MealEntry initialMeal;
@@ -21,6 +22,9 @@ class ScanReviewView extends ConsumerStatefulWidget {
 }
 
 class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
+  /// Wird beim Speichern gesetzt. Verlässt der Nutzer die Ansicht ohne Speichern,
+  /// wird das frisch gespeicherte Scan-Foto ([ScanReviewView.imagePath]) wieder gelöscht.
+  bool _mealSaved = false;
   late TextEditingController _mealNameController;
   late TextEditingController _amountMlController;
   late TextEditingController _weightGramsController;
@@ -71,6 +75,10 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
     _weightGramsController.dispose();
     for (final item in _editableItems) {
       item.dispose();
+    }
+    // Nur das Foto aus diesem Scan (imagePath), nie das Bild einer bestehenden Mahlzeit
+    if (!_mealSaved && widget.imagePath != null) {
+      ImageStorageService.deleteImage(widget.imagePath);
     }
     super.dispose();
   }
@@ -148,6 +156,7 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
       healthReason: widget.initialMeal.healthReason,
     );
 
+    _mealSaved = true;
     ref.read(mealListProvider.notifier).addMeal(savedMeal);
 
     ScaffoldMessenger.of(context).showSnackBar(

@@ -239,53 +239,38 @@ class HiveService {
   }
 
   static const int maxFreeDailyScans = 5;
-  static const String dailyScansCountKey = 'daily_scans_count';
-  static const String dailyScanDateKey = 'daily_scan_date';
 
-  static String _formatIsoDate(DateTime date) =>
-      date.toIso8601String().substring(0, 10);
-
-  /// Synchronisiert das Datum und setzt bei Datumswechsel den Zähler auf 0 zurück
-  static void _checkAndResetDailyCounter([DateTime? date]) {
-    if (!Hive.isBoxOpen(settingsBoxName)) return;
-    try {
-      final todayStr = _formatIsoDate(date ?? DateTime.now());
-      final savedDate = _settingsBox.get(dailyScanDateKey)?['date'] as String?;
-      if (savedDate != todayStr) {
-        _settingsBox.put(dailyScanDateKey, {'date': todayStr});
-        _settingsBox.put(dailyScansCountKey, {'count': 0});
-      }
-    } catch (e, st) {
-      AppLog.e(_tag, 'Scan-Zähler-Reset fehlgeschlagen', e, st);
-    }
-  }
+  // Scan-Zähler: EIN Key pro Kalendertag (scans_JJJJ_MM_TT, siehe _scanDateKey).
+  // Ein einziger atomarer Write pro Scan – kein Reset nötig, ein neuer Tag hat einfach
+  // einen neuen Key. (Vorher: Datum + Zähler in zwei Keys → bei Abbruch dazwischen
+  // stand heutiges Datum mit gestrigem Zählerstand = Sperre bis Mitternacht.)
+  static DateTime _day(DateTime? date) => date ?? DateTime.now();
 
   static int getDailyScansCount([DateTime? date]) {
     if (!Hive.isBoxOpen(settingsBoxName)) return 0;
-    _checkAndResetDailyCounter(date);
     try {
-      final raw = _settingsBox.get(dailyScansCountKey);
-      if (raw != null && raw['count'] != null) {
-        return (raw['count'] as num).toInt();
-      }
+      return getDailyScansUsed(_day(date));
     } catch (e, st) {
       AppLog.e(_tag, 'Scan-Zähler nicht lesbar', e, st);
+      return 0;
     }
-    return 0;
   }
 
-  static Future<void> incrementDailyScansCount([DateTime? date]) async {
-    _checkAndResetDailyCounter(date);
-    final current = getDailyScansCount(date);
-    await _settingsBox.put(dailyScansCountKey, {'count': current + 1});
+  /// Serialisiert über [_scanQueue], damit parallele Aufrufe keinen Zählschritt verlieren.
+  static Future<void> incrementDailyScansCount([DateTime? date]) {
+    final day = _day(date);
+    final result = _scanQueue.then((_) => incrementDailyScansUsed(day));
+    _scanQueue = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
   }
 
-  static bool hasFreeScansRemaining([DateTime? date]) {
-    return getDailyScansCount(date) < maxFreeDailyScans;
-  }
+  static bool hasFreeScansRemaining([DateTime? date]) =>
+      hasDailyScanAvailable(_day(date));
 
   static int getRemainingDailyScans([DateTime? date]) {
-    final remaining = maxFreeDailyScans - getDailyScansCount(date);
+    final day = _day(date);
+    final remaining =
+        dailyFreeScanLimit + getDailyBonusScans(day) - getDailyScansUsed(day);
     return remaining < 0 ? 0 : remaining;
   }
 
