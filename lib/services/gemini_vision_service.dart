@@ -57,17 +57,21 @@ class ScanCancellation {
 /// Gemini-Bildanalyse. Läuft bevorzugt über einen Server-Proxy (GEMINI_PROXY_URL),
 /// sodass kein API-Key in der App liegt. Fallback: GEMINI_KEY via --dart-define (nur Dev).
 class GeminiVisionService {
-  static const String modelName = 'gemini-3.7-flash';
+  static const String modelName = 'gemini-3.5-flash';
 
   /// Ausweichkette bei Überlast (503), Rate-Limit (429) oder nicht verfügbarem
-  /// Modell (404). Die Lite-Modelle am Ende sind am stabilsten verfügbar.
+  /// Modell (404). Reihenfolge nach Messung vom 30.09.2026 (Foto + echter Prompt):
+  /// 3.5-flash ~1,6–3,8 s, 3.5-flash-lite ~1,2 s. 3.7/3.8-flash waren fast immer
+  /// überlastet (503, bis 37 s) und kosteten nur Zeit – daher nicht mehr in der Kette.
   static const List<String> fallbackModels = [
     modelName,
-    'gemini-3.8-flash',
-    'gemini-3.5-flash',
     'gemini-3.5-flash-lite',
     'gemini-3.1-flash-lite',
   ];
+
+  /// Minimales „Nachdenken“: bei 3.5-flash ~570 Denk-Tokens und 1–2 s weniger pro Scan.
+  /// Von allen Modellen in [fallbackModels] unterstützt (3.7/3.8 würden 400 liefern).
+  static const Map<String, dynamic> _fastThinking = {'thinkingLevel': 'minimal'};
 
   static bool _shouldTryNextModel(int status) =>
       status == 503 || status == 429 || status == 404;
@@ -120,7 +124,10 @@ class GeminiVisionService {
     DateTime? deadline,
     ScanCancellation? cancel,
   }) async {
-    final encoded = jsonEncode(body);
+    final config = Map<String, dynamic>.from(
+        body['generationConfig'] as Map? ?? const <String, dynamic>{});
+    config.putIfAbsent('thinkingConfig', () => _fastThinking);
+    final encoded = jsonEncode({...body, 'generationConfig': config});
 
     Future<http.Response> send(Uri uri, Map<String, String> headers) {
       cancel?.throwIfCancelled();
@@ -214,6 +221,35 @@ class GeminiVisionService {
   // Öffentliche API
   // ---------------------------------------------------------------------------
 
+  /// `true`, wenn das Bild bereits ein JPEG innerhalb von [maxDimension] ist
+  /// (z. B. von image_picker mit maxWidth/maxHeight 1024) – dann kein Neu-Kodieren.
+  /// Liest nur den Header, dekodiert keine Pixel.
+  static bool isAlreadyOptimized(Uint8List bytes, {int maxDimension = 1024}) {
+    try {
+      final decoder = img.findDecoderForData(bytes);
+      if (decoder is! img.JpegDecoder) return false;
+      final info = decoder.startDecode(bytes);
+      return info != null &&
+          info.width <= maxDimension &&
+          info.height <= maxDimension;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Wie [compressImageIfNeeded], aber ohne die Oberfläche zu blockieren:
+  /// schon optimierte Fotos werden direkt übernommen, sonst läuft das
+  /// Dekodieren/Kodieren in einem Hintergrund-Isolate.
+  static Future<Uint8List> prepareImageForUpload(Uint8List bytes,
+      {int maxDimension = 1024, int quality = 85}) async {
+    if (isAlreadyOptimized(bytes, maxDimension: maxDimension)) return bytes;
+    return compute(
+      (Uint8List b) => compressImageIfNeeded(b,
+          maxDimension: maxDimension, quality: quality),
+      bytes,
+    );
+  }
+
   /// Skaliert auf max. [maxDimension] px und komprimiert als JPEG.
   static Uint8List compressImageIfNeeded(Uint8List bytes,
       {int maxDimension = 1024, int quality = 85}) {
@@ -305,7 +341,7 @@ class GeminiVisionService {
       analyzeFoodImage(filePath: imagePath, cancel: cancel, english: english);
 
   /// Zeitlimit pro Modell-Anfrage und harte Obergrenze für den gesamten Scan.
-  static const Duration perModelTimeout = Duration(seconds: 20);
+  static const Duration perModelTimeout = Duration(seconds: 12);
   static const Duration scanDeadline = Duration(seconds: 60);
 
   static const String timeoutMessage =
@@ -348,8 +384,8 @@ class GeminiVisionService {
     }
 
     final compressed =
-        compressImageIfNeeded(bytes, maxDimension: 1024, quality: 85);
-    final finalMimeType = compressed.length != bytes.length
+        await prepareImageForUpload(bytes, maxDimension: 1024, quality: 85);
+    final finalMimeType = !identical(compressed, bytes)
         ? 'image/jpeg'
         : (mimeType ?? detectImageMimeType(bytes, filePath: filePath));
 

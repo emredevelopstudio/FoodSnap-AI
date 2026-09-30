@@ -147,6 +147,32 @@ void main() {
         }),
         200);
 
+    test('Schnell-Einstellungen: 3.5-flash zuerst, minimales Nachdenken wird gesendet', () async {
+      Map<String, dynamic>? sentConfig;
+      String? firstModel;
+      final client = MockClient((req) async {
+        firstModel ??= req.url.pathSegments.last.split(':').first;
+        sentConfig = (jsonDecode(req.body) as Map<String, dynamic>)['generationConfig'];
+        return okMeal('Apfel');
+      });
+      final service = GeminiVisionService(apiKey: 'test', proxyUrl: '', client: client);
+      await service.analyzeFoodImage(imageBytes: jpg());
+
+      expect(firstModel, 'gemini-3.5-flash');
+      expect(sentConfig?['thinkingConfig'], {'thinkingLevel': 'minimal'});
+      expect(sentConfig?['response_mime_type'], 'application/json');
+    });
+
+    test('Schon optimiertes JPEG wird nicht neu kodiert (kein Rechenaufwand)', () async {
+      final small = Uint8List.fromList(img.encodeJpg(img.Image(width: 800, height: 600)));
+      final big = Uint8List.fromList(img.encodeJpg(img.Image(width: 2000, height: 1500)));
+      expect(GeminiVisionService.isAlreadyOptimized(small), isTrue);
+      expect(identical(await GeminiVisionService.prepareImageForUpload(small), small), isTrue);
+      expect(GeminiVisionService.isAlreadyOptimized(big), isFalse);
+      final shrunk = img.decodeImage(await GeminiVisionService.prepareImageForUpload(big))!;
+      expect(shrunk.width, 1024);
+    });
+
     test('Zeitüberschreitung beim 1. Modell → nächstes Modell statt Abbruch', () async {
       var calls = 0;
       final client = MockClient((req) async {

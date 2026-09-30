@@ -14,13 +14,13 @@ import { logger } from "firebase-functions";
 
 const GEMINI_KEY = defineSecret("GEMINI_KEY");
 // Modelle serverseitig fixiert – Client kann sie nicht ändern. Bei 503/429/404 → nächstes Modell.
+// Reihenfolge nach Messung 30.09.2026: 3.7/3.8-flash waren dauerhaft überlastet.
 const MODELS = [
-  "gemini-3.7-flash",
-  "gemini-3.8-flash",
   "gemini-3.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
 ];
+const PER_MODEL_TIMEOUT_MS = 12_000;
 const MAX_BODY_BYTES = 4 * 1024 * 1024; // ~1024px-JPEG als Base64 passt locker rein.
 const RATE_LIMIT_PER_MIN = 10;
 
@@ -73,26 +73,38 @@ export const geminiProxy = onRequest(
 
     const payload = JSON.stringify({
       contents,
-      generationConfig: { response_mime_type: "application/json", ...generationConfig },
+      generationConfig: {
+        response_mime_type: "application/json",
+        thinkingConfig: { thinkingLevel: "minimal" }, // spart 1–2 s pro Scan
+        ...generationConfig,
+      },
     });
 
     try {
       let upstream!: Response;
       for (const [i, model] of MODELS.entries()) {
-        upstream = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": GEMINI_KEY.value(),
+        const isLast = i === MODELS.length - 1;
+        try {
+          upstream = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": GEMINI_KEY.value(),
+              },
+              body: payload,
+              signal: AbortSignal.timeout(PER_MODEL_TIMEOUT_MS),
             },
-            body: payload,
-            signal: AbortSignal.timeout(50_000),
-          },
-        );
+          );
+        } catch (err) {
+          // Zeitüberschreitung/Netzfehler beim Modell → nächstes Modell statt Abbruch
+          if (isLast) throw err;
+          logger.warn("Gemini model timed out, falling back", { model });
+          continue;
+        }
         const tryNext = [503, 429, 404].includes(upstream.status);
-        if (!tryNext || i === MODELS.length - 1) break;
+        if (!tryNext || isLast) break;
         logger.warn("Gemini model overloaded, falling back", { model, status: upstream.status });
       }
 
