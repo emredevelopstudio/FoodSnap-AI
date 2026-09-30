@@ -133,6 +133,72 @@ void main() {
   group('GeminiVisionService Modell-Fallback', () {
     Uint8List jpg() => Uint8List.fromList(img.encodeJpg(img.Image(width: 10, height: 10)));
 
+    http.Response okMeal(String name) => http.Response(
+        jsonEncode({
+          "candidates": [
+            {
+              "content": {
+                "parts": [
+                  {"text": jsonEncode({"meal_name": name, "total_calories": 100})}
+                ]
+              }
+            }
+          ]
+        }),
+        200);
+
+    test('Zeitüberschreitung beim 1. Modell → nächstes Modell statt Abbruch', () async {
+      var calls = 0;
+      final client = MockClient((req) async {
+        calls++;
+        if (calls == 1) {
+          await Future<void>.delayed(const Duration(seconds: 2)); // hängt
+        }
+        return okMeal('Banane');
+      });
+      final service = GeminiVisionService(apiKey: 'test', proxyUrl: '', client: client);
+      final meal = await service.analyzeFoodImage(
+        imageBytes: jpg(),
+        perModelTimeout: const Duration(milliseconds: 100),
+        scanDeadline: const Duration(seconds: 5),
+      );
+      expect(meal.name, 'Banane');
+      expect(calls, 2);
+    });
+
+    test('Gesamt-Obergrenze: hängende Modelle → klare Timeout-Meldung', () async {
+      final client = MockClient((_) async {
+        await Future<void>.delayed(const Duration(seconds: 5));
+        return okMeal('nie');
+      });
+      final service = GeminiVisionService(apiKey: 'test', proxyUrl: '', client: client);
+      final sw = Stopwatch()..start();
+      await expectLater(
+        service.analyzeFoodImage(
+          imageBytes: jpg(),
+          perModelTimeout: const Duration(milliseconds: 150),
+          scanDeadline: const Duration(milliseconds: 400),
+        ),
+        throwsA(isA<ScanAnalysisException>().having(
+            (e) => e.customMessage, 'message', GeminiVisionService.timeoutMessage)),
+      );
+      expect(sw.elapsed, lessThan(const Duration(seconds: 2)));
+    });
+
+    test('Abbrechen beendet den Scan sofort', () async {
+      final client = MockClient((_) async {
+        await Future<void>.delayed(const Duration(seconds: 5));
+        return okMeal('nie');
+      });
+      final service = GeminiVisionService(apiKey: 'test', proxyUrl: '', client: client);
+      final cancel = ScanCancellation();
+      final sw = Stopwatch()..start();
+      final future = service.analyzeFoodImage(imageBytes: jpg(), cancel: cancel);
+      Future<void>.delayed(const Duration(milliseconds: 50), cancel.cancel);
+      await expectLater(future, throwsA(isA<ScanCancelledException>()));
+      expect(sw.elapsed, lessThan(const Duration(seconds: 1)));
+    });
+
     test('weicht bei 503 auf das nächste Modell aus', () async {
       final calledModels = <String>[];
       final client = MockClient((req) async {

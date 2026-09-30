@@ -7,6 +7,7 @@ import '../models/meal_entry.dart';
 import '../providers/goals_provider.dart';
 import '../providers/meal_provider.dart';
 import '../widgets/app_native_ad_card.dart';
+import '../widgets/dispose_on_unmount.dart';
 import '../l10n/app_localizations.dart';
 
 class MealsHistoryView extends ConsumerStatefulWidget {
@@ -859,7 +860,9 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) {
+      builder: (ctx) => DisposeOnUnmount(
+        disposables: [nameController, calController, proteinController, carbsController, fatController, amountMlController, weightGramsController],
+        child: Builder(builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Padding(
@@ -1110,7 +1113,7 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
             );
           },
         );
-      },
+      })),
     );
   }
 

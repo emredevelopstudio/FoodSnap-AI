@@ -362,9 +362,12 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Gescannte Mahlzeit',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                const Flexible(
+                  child: Text(
+                    'Gescannte Mahlzeit',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 if (widget.initialMeal.healthScore > 0)
                   Container(
@@ -794,12 +797,20 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
             const SizedBox(height: 10),
 
             // Zeile 3: Makros der Komponente (aktualisieren sich automatisch bei Gramm-Änderung)
+            // Wrap statt fester Row: bricht auf schmalen Handys (≤360 dp) / großer Schrift um
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildMacroPill('${currentCalories.round()} kcal', const Color(0xFF10B981)),
-                _buildMacroPill('${currentProtein.toStringAsFixed(1)}g P', const Color(0xFF3B82F6)),
-                _buildMacroPill('${currentFat.toStringAsFixed(1)}g F', const Color(0xFFEF4444)),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _buildMacroPill('${currentCalories.round()} kcal', const Color(0xFF10B981)),
+                      _buildMacroPill('${currentProtein.toStringAsFixed(1)}g P', const Color(0xFF3B82F6)),
+                      _buildMacroPill('${currentFat.toStringAsFixed(1)}g F', const Color(0xFFEF4444)),
+                    ],
+                  ),
+                ),
                 InkWell(
                   onTap: () => _showManualMacroEditSheet(item),
                   borderRadius: BorderRadius.circular(6),

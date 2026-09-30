@@ -33,6 +33,27 @@ class ScanAnalysisException implements Exception {
   String toString() => customMessage;
 }
 
+/// Nutzer hat den Scan abgebrochen – kein Fehler, keine Fehlermeldung.
+class ScanCancelledException implements Exception {
+  const ScanCancelledException();
+}
+
+/// Abbruch-Signal für einen laufenden Scan (z. B. „Abbrechen“-Knopf im Ladedialog).
+class ScanCancellation {
+  final _completer = Completer<void>();
+
+  bool get isCancelled => _completer.isCompleted;
+  Future<void> get whenCancelled => _completer.future;
+
+  void cancel() {
+    if (!_completer.isCompleted) _completer.complete();
+  }
+
+  void throwIfCancelled() {
+    if (isCancelled) throw const ScanCancelledException();
+  }
+}
+
 /// Gemini-Bildanalyse. Läuft bevorzugt über einen Server-Proxy (GEMINI_PROXY_URL),
 /// sodass kein API-Key in der App liegt. Fallback: GEMINI_KEY via --dart-define (nur Dev).
 class GeminiVisionService {
@@ -88,33 +109,65 @@ class GeminiVisionService {
   /// Direkt: Key im Header (nicht in der URL → taucht nicht in Logs/Proxies auf).
   /// Direktmodus: bei 503/429 automatisch auf das nächste Modell in [fallbackModels]
   /// ausweichen (der Proxy macht das serverseitig selbst).
-  Future<String?> _generate(Map<String, dynamic> body, Duration timeout) async {
+  ///
+  /// [perModelTimeout]: Zeitlimit pro Modell-Anfrage – bei Überschreitung (Direktmodus)
+  /// wird das nächste Modell probiert statt aufzugeben.
+  /// [deadline]: harte Obergrenze für den gesamten Aufruf.
+  /// [cancel]: bricht sofort ab ([ScanCancelledException]).
+  Future<String?> _generate(
+    Map<String, dynamic> body,
+    Duration perModelTimeout, {
+    DateTime? deadline,
+    ScanCancellation? cancel,
+  }) async {
     final encoded = jsonEncode(body);
 
+    Future<http.Response> send(Uri uri, Map<String, String> headers) {
+      cancel?.throwIfCancelled();
+      var limit = perModelTimeout;
+      if (deadline != null) {
+        final remaining = deadline.difference(DateTime.now());
+        if (remaining <= Duration.zero) {
+          throw TimeoutException('Gesamtzeit für den Scan überschritten');
+        }
+        if (remaining < limit) limit = remaining;
+      }
+      final request =
+          _client.post(uri, headers: headers, body: encoded).timeout(limit);
+      if (cancel == null) return request;
+      return Future.any([
+        request,
+        cancel.whenCancelled
+            .then<http.Response>((_) => throw const ScanCancelledException()),
+      ]);
+    }
+
     if (proxyUrl.isNotEmpty) {
-      final response = await _client
-          .post(Uri.parse(proxyUrl),
-              headers: {'Content-Type': 'application/json'}, body: encoded)
-          .timeout(timeout);
+      final response = await send(
+          Uri.parse(proxyUrl), {'Content-Type': 'application/json'});
       return _extractText(response);
     }
 
     for (var i = 0; i < fallbackModels.length; i++) {
       final model = fallbackModels[i];
-      final response = await _client
-          .post(
-            Uri.parse(
-                'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent'),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': apiKey,
-            },
-            body: encoded,
-          )
-          .timeout(timeout);
+      final isLast = i == fallbackModels.length - 1;
+      final http.Response response;
+      try {
+        response = await send(
+          Uri.parse(
+              'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent'),
+          {'Content-Type': 'application/json', 'x-goog-api-key': apiKey},
+        );
+      } on TimeoutException {
+        final deadlineLeft = deadline == null ||
+            deadline.difference(DateTime.now()) > Duration.zero;
+        if (isLast || !deadlineLeft) rethrow;
+        AppLog.w(_tag,
+            '$model antwortet nicht rechtzeitig, weiche aus auf ${fallbackModels[i + 1]}');
+        continue;
+      }
 
-      if (_shouldTryNextModel(response.statusCode) &&
-          i < fallbackModels.length - 1) {
+      if (_shouldTryNextModel(response.statusCode) && !isLast) {
         AppLog.w(_tag,
             '$model antwortet ${response.statusCode}, weiche aus auf ${fallbackModels[i + 1]}');
         continue;
@@ -247,15 +300,26 @@ class GeminiVisionService {
   }
 
   /// Einstiegspunkt für den Foto-Scan im Dashboard.
-  Future<MealEntry> analyzeMeal(String imagePath) =>
-      analyzeFoodImage(filePath: imagePath);
+  Future<MealEntry> analyzeMeal(String imagePath, {ScanCancellation? cancel}) =>
+      analyzeFoodImage(filePath: imagePath, cancel: cancel);
+
+  /// Zeitlimit pro Modell-Anfrage und harte Obergrenze für den gesamten Scan.
+  static const Duration perModelTimeout = Duration(seconds: 20);
+  static const Duration scanDeadline = Duration(seconds: 60);
+
+  static const String timeoutMessage =
+      'Die Analyse hat zu lange gedauert. Bitte prüfe deine Verbindung und versuche es erneut.';
 
   Future<MealEntry> analyzeFoodImage({
     String? filePath,
     Uint8List? imageBytes,
     String? mimeType,
     void Function(String status)? onStatusUpdate,
+    ScanCancellation? cancel,
+    Duration perModelTimeout = perModelTimeout,
+    Duration scanDeadline = scanDeadline,
   }) async {
+    final deadline = DateTime.now().add(scanDeadline);
     final Uint8List bytes;
     if (imageBytes != null) {
       bytes = imageBytes;
@@ -304,10 +368,13 @@ class GeminiVisionService {
     const maxAttempts = 2;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        final text = await _generate(body, const Duration(seconds: 45));
+        final text = await _generate(body, perModelTimeout,
+            deadline: deadline, cancel: cancel);
         if (text == null) throw const ScanAnalysisException();
         return parseGeminiResponse(text, imagePath: filePath);
       } on FormatException {
+        rethrow;
+      } on ScanCancelledException {
         rethrow;
       } catch (e, st) {
         AppLog.e(_tag, 'Scan fehlgeschlagen (Versuch $attempt)', e, st);
@@ -317,14 +384,24 @@ class GeminiVisionService {
             e is TimeoutException ||
             err.contains('503') ||
             err.contains('unavailable');
+        // Retry nur, wenn inkl. 2 s Pause noch Zeit bis zur Deadline bleibt
+        final timeLeft = deadline.difference(DateTime.now()) >
+            const Duration(seconds: 5);
 
-        if (retryable && attempt < maxAttempts) {
+        if (retryable && attempt < maxAttempts && timeLeft) {
           onStatusUpdate?.call(
               'Die Bilderkennung ist kurz ausgelastet. Wiederholung in 2 Sekunden...');
-          await Future.delayed(const Duration(seconds: 2));
+          await Future.any([
+            Future<void>.delayed(const Duration(seconds: 2)),
+            if (cancel != null) cancel.whenCancelled,
+          ]);
+          cancel?.throwIfCancelled();
           continue;
         }
         if (isRateLimitError(e)) throw ScanRateLimitException();
+        if (e is TimeoutException) {
+          throw const ScanAnalysisException(timeoutMessage);
+        }
         if (e is ScanAnalysisException) rethrow;
         throw const ScanAnalysisException();
       }

@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/meal_entry.dart';
 import '../providers/meal_provider.dart';
+import '../services/gemini_vision_service.dart';
 import '../services/hive_service.dart';
 import '../services/image_storage_service.dart';
 import '../services/purchase_service.dart';
@@ -15,6 +16,7 @@ import '../widgets/pro_upgrade_sheet.dart';
 import '../widgets/privacy_consent_dialog.dart';
 import '../widgets/meal_card.dart';
 import '../widgets/progress_card.dart';
+import '../widgets/dispose_on_unmount.dart';
 import '../l10n/app_localizations.dart';
 import 'manual_entry_view.dart';
 import 'scan_review_view.dart';
@@ -96,28 +98,37 @@ class DashboardView extends ConsumerWidget {
       }
       if (!context.mounted) return;
       loadingNavigator = Navigator.of(context, rootNavigator: true);
+      final cancellation = ScanCancellation();
       loadingRoute = DialogRoute<void>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const PopScope(
+        builder: (ctx) => PopScope(
           canPop: false,
+          // Zurück-Taste bricht den Scan ab statt ihn zu blockieren
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) cancellation.cancel();
+          },
           child: Center(
             child: Card(
-              margin: EdgeInsets.all(24),
+              margin: const EdgeInsets.all(24),
               child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                padding: const EdgeInsets.fromLTRB(32, 24, 32, 8),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(
+                    const CircularProgressIndicator(
                       color: Color(0xFF10B981),
                     ),
-                    SizedBox(height: 18),
-                    Text(
+                    const SizedBox(height: 18),
+                    const Text(
                       'Foto wird gescannt...',
                       style:
                           TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: cancellation.cancel,
+                      child: const Text('Abbrechen'),
                     ),
                   ],
                 ),
@@ -128,7 +139,8 @@ class DashboardView extends ConsumerWidget {
       );
       loadingNavigator.push(loadingRoute!);
 
-      final analysisFuture = geminiVisionService.analyzeMeal(image.path);
+      final analysisFuture =
+          geminiVisionService.analyzeMeal(image.path, cancel: cancellation);
 
       savedImage = ImageStorageService.saveImagePermanently(image.path);
 
@@ -165,6 +177,9 @@ class DashboardView extends ConsumerWidget {
       discardSavedImage();
       if (!context.mounted) return;
       closeLoadingDialog();
+
+      // Vom Nutzer abgebrochen: kein Fehler, keine Meldung, Scan zählt nicht
+      if (e is ScanCancelledException) return;
 
       debugPrint('[SCAN PIPELINE ERROR]: $e');
       debugPrint('[SCAN STACKTRACE]: $stackTrace');
@@ -736,7 +751,9 @@ class DashboardView extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) {
+      builder: (ctx) => DisposeOnUnmount(
+        disposables: [nameController, calController, proteinController, carbsController, fatController, weightGramsController, amountMlController],
+        child: Builder(builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Padding(
@@ -1043,7 +1060,7 @@ class DashboardView extends ConsumerWidget {
         );
           },
         );
-      },
+      })),
     );
   }
 
@@ -1372,7 +1389,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => DisposeOnUnmount(disposables: [controller], child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: isDarkCard ? const Color(0xFF1E1E1E) : Colors.white,
         title: const Row(
@@ -1468,7 +1485,7 @@ class _CreatineTrackerCard extends ConsumerWidget {
             child: const Text('Speichern'),
           ),
         ],
-      ),
+      )),
     );
   }
 

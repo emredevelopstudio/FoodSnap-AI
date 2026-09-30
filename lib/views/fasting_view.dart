@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/fasting_provider.dart';
+import '../widgets/dispose_on_unmount.dart';
 
 class FastingView extends ConsumerWidget {
   const FastingView({super.key});
@@ -711,7 +712,7 @@ class FastingView extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
+      builder: (ctx) => DisposeOnUnmount(disposables: [currentController, targetController, startController], child: Padding(
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
@@ -817,7 +818,7 @@ class FastingView extends ConsumerWidget {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 
