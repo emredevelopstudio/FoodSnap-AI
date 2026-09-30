@@ -59,22 +59,14 @@ class PurchaseService {
   /// völlig egal ob der Entwickler-Schalter an oder aus ist!
   /// Wenn kein echter Kauf vorliegt, kann im Debug-Modus Pro simuliert werden.
   static bool get isPremium {
-    // 1. Echter Kauf / Wiederherstellungs-Status aus Hive oder Memory-Cache
-    if (HiveService.getIsProUser() || _cachedIsPremium) {
-      return true;
-    }
-
-    // 2. Entwickler-Simulation im Debug-Modus (greift, wenn noch kein echter Kauf vorliegt)
+    // 1. Debug: Dev-Schalter gewinnt in BEIDE Richtungen (Free trotz Testkauf testbar)
     if (kDebugMode) {
-      if (devOverrideIsPremium == true) {
-        return true;
-      }
-      if (_isDevAdmin) {
-        return true;
-      }
+      if (devOverrideIsPremium != null) return devOverrideIsPremium!;
+      if (_isDevAdmin) return true;
     }
 
-    return false;
+    // 2. Kauf-Status (von RevenueCat abgeglichen, Hive = Offline-Cache)
+    return HiveService.getIsProUser() || _cachedIsPremium;
   }
 
   /// Alias für Pro-Status (Werbefreiheit & unbegrenzte Scans)
@@ -126,26 +118,18 @@ class PurchaseService {
               'activeEntitlements=${customerInfo.entitlements.active.keys}, '
               'nonSubTransactions=${customerInfo.nonSubscriptionTransactions.map((t) => t.productIdentifier).toList()}');
 
-          final isSubbed = checkCustomerInfoIsPro(customerInfo) ||
-              customerInfo.allPurchasedProductIdentifiers.contains(productId) ||
-              customerInfo.allPurchasedProductIdentifiers.isNotEmpty;
+          final isSubbed = checkCustomerInfoIsPro(customerInfo);
 
-          if (isSubbed) {
-            debugPrint('[PurchaseService] Pro-Kauf über Listener bestätigt! Speichere persistent...');
-            await HiveService.setIsProUser(true);
-            _updateProStatus(true, ref);
-          }
+          // RevenueCat ist die Quelle der Wahrheit: auch Rücknahme (Erstattung) übernehmen.
+          await HiveService.setIsProUser(isSubbed);
+          _updateProStatus(isSubbed, ref);
         } catch (e) {
           debugPrint('[PurchaseService] Fehler im CustomerInfo Update Listener: $e');
         }
       });
 
       // 3. Status beim Start abfragen
-      final isSubbed = await isUserSubscribed();
-      if (isSubbed) {
-        await HiveService.setIsProUser(true);
-        _updateProStatus(true, ref);
-      }
+      _updateProStatus(await isUserSubscribed(), ref);
     } on SocketException catch (e) {
       debugPrint('[PurchaseService] Offline beim Start (SocketException): $e. Fallback auf Hive-Status.');
       _fallbackToLocalCachedPro(ref);
@@ -190,31 +174,15 @@ class PurchaseService {
   }
 
   /// Prüft, ob der Nutzer Pro-Status besitzt
+  /// Fragt RevenueCat (Quelle der Wahrheit) und gleicht den lokalen Hive-Status ab.
+  /// Hive dient nur als Offline-Fallback.
   static Future<bool> isUserSubscribed([String id = entitlementId]) async {
-    // 1. Lokaler Hive-Speicher hat höchste Priorität
-    if (HiveService.getIsProUser() || _cachedIsPremium) {
-      return true;
-    }
-
-    // 2. Entwickler-Bypass im Debug-Modus
-    if (kDebugMode) {
-      if (devOverrideIsPremium == true) {
-        return true;
-      }
-      if (_isDevAdmin) return true;
-    }
-
     try {
       final customerInfo = await Purchases.getCustomerInfo();
-      final isSubbed = checkCustomerInfoIsPro(customerInfo) ||
-          customerInfo.allPurchasedProductIdentifiers.contains(productId) ||
-          customerInfo.allPurchasedProductIdentifiers.isNotEmpty;
-
-      if (isSubbed) {
-        await HiveService.setIsProUser(true);
-        _updateProStatus(true);
-      }
-      return isSubbed;
+      final isSubbed = checkCustomerInfoIsPro(customerInfo);
+      await HiveService.setIsProUser(isSubbed);
+      _updateProStatus(isSubbed);
+      return isPremium;
     } on SocketException catch (e) {
       debugPrint('[PurchaseService] Offline bei isUserSubscribed (SocketException): $e');
       return HiveService.getIsProUser();
@@ -320,9 +288,7 @@ class PurchaseService {
       debugPrint('>>> [DEBUG-RESTORE] activeSubscriptions: ${customerInfo.activeSubscriptions}');
       debugPrint('>>> [DEBUG-RESTORE] entitlements: ${customerInfo.entitlements.all}');
 
-      final isSubbed = checkCustomerInfoIsPro(customerInfo) ||
-          customerInfo.allPurchasedProductIdentifiers.contains(productId) ||
-          customerInfo.allPurchasedProductIdentifiers.isNotEmpty;
+      final isSubbed = checkCustomerInfoIsPro(customerInfo);
 
       if (isSubbed) {
         debugPrint('>>> [DEBUG-RESTORE] Kauf bestätigt! Speichere in Hive...');
@@ -353,9 +319,11 @@ class PurchaseService {
   static void _updateProStatus(bool value, [dynamic ref]) {
     try {
       _cachedIsPremium = value;
-      proStatusNotifier.value = value;
+      // Effektiver Status (berücksichtigt den Dev-Schalter im Debug-Modus)
+      final active = isPremium;
+      proStatusNotifier.value = active;
       if (ref is WidgetRef) {
-        ref.read(premiumProvider.notifier).setProStatus(value);
+        ref.read(premiumProvider.notifier).setProStatus(active);
       }
     } catch (e) {
       debugPrint('[PurchaseService] Hinweis beim Aktualisieren des Riverpod-Status: $e');

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/ad_service.dart';
-import '../services/hive_service.dart';
 import '../services/purchase_service.dart';
 
 class AppBannerAd extends ConsumerStatefulWidget {
@@ -92,7 +91,6 @@ class _AppBannerAdState extends ConsumerState<AppBannerAd>
         final proRiverpod = ref.watch(premiumProvider);
         final isPro = proNotifier ||
             PurchaseService.proStatusNotifier.value ||
-            HiveService.getIsProUser() ||
             proRiverpod ||
             PurchaseService.isProUser;
 

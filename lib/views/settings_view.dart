@@ -76,7 +76,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       }
 
       if (!mounted) return;
-      if (success || PurchaseService.isProUser || HiveService.getIsProUser()) {
+      if (success || PurchaseService.isProUser) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -252,7 +252,6 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
             valueListenable: PurchaseService.proStatusNotifier,
             builder: (context, proNotifierVal, _) {
               final isPro = ref.watch(premiumProvider) ||
-                  HiveService.getIsProUser() ||
                   proNotifierVal ||
                   PurchaseService.isProUser;
 
@@ -717,14 +716,12 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 subtitle: Text(
-                  HiveService.getIsProUser()
-                      ? 'Echter Kauf in Hive aktiv (Pro bleibt aktiv)'
-                      : (PurchaseService.devOverrideIsPremium == true
-                          ? 'Simulation aktiv (Pro aktiviert)'
-                          : 'Simulation aus (Free-Modus)'),
+                  PurchaseService.devOverrideIsPremium == null
+                      ? 'Echter Status: ${HiveService.getIsProUser() ? 'Pro (Kauf)' : 'Free'}'
+                      : 'Simuliert: ${PurchaseService.devOverrideIsPremium! ? 'Pro' : 'Free'} (überschreibt Kauf)',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                value: PurchaseService.devOverrideIsPremium ?? false,
+                value: PurchaseService.isPremium,
                 onChanged: (val) {
                   PurchaseService.setDevOverrideIsPremium(val, ref);
                   setState(() {});

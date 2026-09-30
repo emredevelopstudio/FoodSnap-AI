@@ -99,7 +99,11 @@ class AdService {
 
   /// Holt zuerst die Werbe-Einwilligung (UMP) und startet erst danach das SDK.
   /// Nach dem ersten Frame aufrufen, da der Einwilligungsdialog eine sichtbare Activity braucht.
+  static bool _initStarted = false;
+
   static Future<void> init() async {
+    if (_initStarted) return;
+    _initStarted = true;
     try {
       final canRequestAds = await AdConsentService.gatherConsent();
       if (!canRequestAds) {

@@ -49,7 +49,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
   }
 
   void _onProNotifierChanged() {
-    if (PurchaseService.proStatusNotifier.value || HiveService.getIsProUser()) {
+    if (PurchaseService.proStatusNotifier.value) {
       _onPurchaseSuccess();
     }
   }
@@ -113,7 +113,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
       setState(() => _isLoading = false);
 
       debugPrint('>>> [DEBUG-KAUF] Ergebnis: success=$success, isProUser=${PurchaseService.isProUser}, Hive=${HiveService.getIsProUser()}');
-      if (success || PurchaseService.isProUser || HiveService.getIsProUser()) {
+      if (success || PurchaseService.isProUser) {
         _onPurchaseSuccess();
       }
     } catch (e, stack) {
@@ -137,7 +137,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
       final isPremium = await PurchaseService.restorePurchases(ref);
       if (!mounted) return;
       setState(() => _isLoading = false);
-      if (isPremium || PurchaseService.isProUser || HiveService.getIsProUser()) {
+      if (isPremium || PurchaseService.isProUser) {
         _onPurchaseSuccess(message: 'Deine Pro-Version wurde erfolgreich wiederhergestellt!');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

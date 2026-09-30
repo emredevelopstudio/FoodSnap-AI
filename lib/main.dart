@@ -51,6 +51,10 @@ void main() async {
   // AdService.init() fängt Fehler selbst ab und blockiert den App-Start nicht.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!PurchaseService.isProUser) AdService.init();
+    // Wechsel Pro → Free (Erstattung, Dev-Schalter): Werbung ohne Neustart starten
+    PurchaseService.proStatusNotifier.addListener(() {
+      if (!PurchaseService.proStatusNotifier.value) AdService.init();
+    });
   });
 }
 
