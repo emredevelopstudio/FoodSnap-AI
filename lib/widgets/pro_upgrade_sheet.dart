@@ -27,6 +27,9 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
   bool _isLoading = false;
   bool _hasHandledSuccess = false;
 
+  /// Echter Store-Preis in Landeswährung; `null` bis geladen oder wenn offline.
+  String? _priceString;
+
   void _onPurchaseSuccess({String? message}) {
     if (_hasHandledSuccess) return;
     _hasHandledSuccess = true;
@@ -47,6 +50,9 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
   void initState() {
     super.initState();
     PurchaseService.proStatusNotifier.addListener(_onProNotifierChanged);
+    PurchaseService.fetchPriceString().then((price) {
+      if (mounted && price != null) setState(() => _priceString = price);
+    });
   }
 
   void _onProNotifierChanged() {
@@ -226,9 +232,7 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
             const SizedBox(height: 20),
             _buildFeatureRow(Icons.all_inclusive_rounded, context.l10n.tr('Unbegrenzte KI-Mahlzeiten-Scans', 'Unlimited AI meal scans')),
             _buildFeatureRow(Icons.block_rounded, context.l10n.tr('100 % Werbefreiheit (keine Banner, keine Einblendungen)', '100% ad-free (no banners, no pop-ups)')),
-            _buildFeatureRow(Icons.bolt_rounded, context.l10n.tr('Schnellere KI-Scan-Latenz & priorisierte Analysen', 'Faster AI scan latency & prioritized analysis')),
-            _buildFeatureRow(Icons.auto_graph_rounded, context.l10n.tr('Detaillierte Nährwert- & Gesundheitsanalyse', 'Detailed nutrition & health analysis')),
-            _buildFeatureRow(Icons.cloud_done_outlined, context.l10n.tr('Prioritäts-Serverzugang', 'Priority server access')),
+            // Nur Vorteile, die Pro tatsächlich bietet (keine Scan-Grenze, keine Werbung).
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -253,7 +257,10 @@ class _ProUpgradeSheetState extends ConsumerState<ProUpgradeSheet> {
                         ),
                       )
                     : Text(
-                        context.l10n.tr('Jetzt für 2,99 € freischalten', 'Unlock now for €2.99'),
+                        _priceString == null
+                            ? context.l10n.tr('Jetzt freischalten', 'Unlock now')
+                            : context.l10n.tr('Jetzt für $_priceString freischalten',
+                                'Unlock now for $_priceString'),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

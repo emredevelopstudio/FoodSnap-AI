@@ -195,6 +195,29 @@ class PurchaseService {
     }
   }
 
+  /// Lokalisierter Preis aus dem Play Store (z. B. „2,99 €“, „$2.99“), in derselben
+  /// Reihenfolge wie der Kauf: erstes Package des aktuellen Offerings, sonst das Produkt.
+  /// `null`, wenn offline oder nichts gefunden – dann ohne Preis anzeigen.
+  static Future<String?> fetchPriceString() async {
+    try {
+      final current = (await Purchases.getOfferings()).current;
+      if (current != null && current.availablePackages.isNotEmpty) {
+        return current.availablePackages.first.storeProduct.priceString;
+      }
+      for (final category in [
+        ProductCategory.nonSubscription,
+        ProductCategory.subscription,
+      ]) {
+        final products = await Purchases.getProducts([productId],
+            productCategory: category);
+        if (products.isNotEmpty) return products.first.priceString;
+      }
+    } catch (e) {
+      AppLog.w('PurchaseService', 'Preis nicht abrufbar', e);
+    }
+    return null;
+  }
+
   /// Ruft die aktuellen Paywalls/Offerings ab
   static Future<Offerings?> getOfferings() async {
     try {
