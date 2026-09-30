@@ -566,7 +566,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           const SizedBox(height: 24),
 
           // Sektion 4: Rechtliches & Datenschutz
-          _buildSectionHeader('Rechtliches & Datenschutz', titleColor),
+          _buildSectionHeader(l10n.t('legal_section'), titleColor),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
@@ -594,9 +594,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       ),
                       child: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF2563EB)),
                     ),
-                    title: const Text(
-                      'Datenschutzerklärung',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    title: Text(
+                      l10n.t('privacy_policy'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     subtitle: const Text(
                       'Informationen zur Datenverarbeitung & KI-Nutzung',
@@ -626,14 +626,14 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                             : Colors.orange,
                       ),
                     ),
-                    title: const Text(
-                      'KI-Einwilligung',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    title: Text(
+                      l10n.t('ai_consent'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     subtitle: Text(
                       HiveService.hasAcceptedPrivacy()
-                          ? 'Zugestimmt (Kamera- & KI-Analyse aktiv)'
-                          : 'Abgelehnt (KI-Scan deaktiviert)',
+                          ? l10n.t('ai_consent_accepted')
+                          : l10n.t('ai_consent_declined'),
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                     trailing: TextButton(
@@ -643,8 +643,8 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       },
                       child: Text(
                         HiveService.hasAcceptedPrivacy()
-                            ? 'Details'
-                            : 'Zustimmen',
+                            ? l10n.t('details')
+                            : l10n.t('privacy_accept'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: HiveService.hasAcceptedPrivacy()
@@ -669,12 +669,12 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                           ),
                           child: const Icon(Icons.campaign_outlined, color: Color(0xFF2563EB)),
                         ),
-                        title: const Text(
-                          'Werbe-Einstellungen',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        title: Text(
+                          l10n.t('ad_settings'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         subtitle: Text(
-                          'Einwilligung für personalisierte Werbung ändern',
+                          l10n.t('ad_settings_sub'),
                           style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         ),
                         onTap: AdConsentService.showPrivacyOptionsForm,

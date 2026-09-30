@@ -112,6 +112,26 @@ class AppLocalizations {
       'import_title': 'Backup importieren',
       'import_info': 'Füge die JSON-Backup-Daten hier ein, um deine Mahlzeiten und Ziele wiederherzustellen:',
       'import_btn': 'Importieren',
+
+      // Datenschutz & KI-Einwilligung (muss inhaltlich zu privacy.html passen)
+      'privacy_title': 'Datenschutz & KI-Nutzung',
+      'privacy_intro': 'Um deine Mahlzeiten automatisch zu erkennen und Nährwerte präzise zu ermitteln, nutzt FoodSnap AI die Kamera und Galerie deines Geräts.',
+      'privacy_gemini_notice': 'Zur Erkennung wird dein Foto verschlüsselt an Google (Gemini API) übertragen und dort analysiert. Deine Mahlzeiten und Fotos werden nur auf deinem Gerät gespeichert und nicht verkauft.',
+      'privacy_read_policy': 'Datenschutzerklärung lesen',
+      'privacy_decline': 'Ablehnen',
+      'privacy_accept': 'Zustimmen',
+      'privacy_declined_snack': 'KI-Scan bleibt deaktiviert. Du kannst der Nutzung jederzeit in den Einstellungen zustimmen.',
+      'privacy_open_failed': 'Konnte Datenschutzerklärung nicht öffnen.',
+      'privacy_open_error': 'Fehler beim Öffnen des Links',
+      'privacy_policy_url': 'https://emredevelopstudio.github.io/FoodSnap-AI/privacy.html',
+      'legal_section': 'Rechtliches & Datenschutz',
+      'privacy_policy': 'Datenschutzerklärung',
+      'ai_consent': 'KI-Einwilligung',
+      'ai_consent_accepted': 'Zugestimmt (Kamera- & KI-Analyse aktiv)',
+      'ai_consent_declined': 'Abgelehnt (KI-Scan deaktiviert)',
+      'details': 'Details',
+      'ad_settings': 'Werbe-Einstellungen',
+      'ad_settings_sub': 'Einwilligung für personalisierte Werbung ändern',
     },
     'en': {
       // Navigation
@@ -208,6 +228,26 @@ class AppLocalizations {
       'import_title': 'Import Backup',
       'import_info': 'Paste your JSON backup data here to restore your meals and goals:',
       'import_btn': 'Import',
+
+      // Privacy & AI consent (must match privacy_en.html)
+      'privacy_title': 'Privacy & AI Usage',
+      'privacy_intro': 'To recognize your meals automatically and estimate nutrition accurately, FoodSnap AI uses your device\'s camera and photo gallery.',
+      'privacy_gemini_notice': 'For recognition, your photo is sent encrypted to Google (Gemini API) and analyzed there. Your meals and photos are stored only on your device and are never sold.',
+      'privacy_read_policy': 'Read privacy policy',
+      'privacy_decline': 'Decline',
+      'privacy_accept': 'Accept',
+      'privacy_declined_snack': 'AI scan stays disabled. You can give your consent at any time in Settings.',
+      'privacy_open_failed': 'Could not open the privacy policy.',
+      'privacy_open_error': 'Error opening the link',
+      'privacy_policy_url': 'https://emredevelopstudio.github.io/FoodSnap-AI/privacy_en.html',
+      'legal_section': 'Legal & Privacy',
+      'privacy_policy': 'Privacy policy',
+      'ai_consent': 'AI consent',
+      'ai_consent_accepted': 'Accepted (camera & AI analysis active)',
+      'ai_consent_declined': 'Declined (AI scan disabled)',
+      'details': 'Details',
+      'ad_settings': 'Ad settings',
+      'ad_settings_sub': 'Change consent for personalized ads',
     },
   };
 

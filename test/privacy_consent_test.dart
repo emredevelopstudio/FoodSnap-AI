@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:foodsnap_ai/l10n/app_localizations.dart';
 import 'package:foodsnap_ai/services/hive_service.dart';
 import 'package:foodsnap_ai/widgets/privacy_consent_dialog.dart';
 
@@ -96,6 +98,51 @@ void main() {
       // Verify action buttons
       expect(find.text('Ablehnen'), findsOneWidget);
       expect(find.text('Zustimmen'), findsOneWidget);
+    });
+
+    testWidgets('App auf Englisch → Dialog und Datenschutz-Link auf Englisch', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      late BuildContext appContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('de'), Locale('en')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Builder(
+            builder: (context) {
+              appContext = context;
+              return Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => PrivacyConsentDialog.show(context),
+                    child: const Text('Open'),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Privacy & AI Usage'), findsOneWidget);
+      expect(find.textContaining('sent encrypted to Google (Gemini API)'), findsOneWidget);
+      expect(find.text('Read privacy policy'), findsOneWidget);
+      expect(find.text('Decline'), findsOneWidget);
+      expect(find.text('Accept'), findsOneWidget);
+      expect(find.textContaining('Datenschutz'), findsNothing);
+      expect(PrivacyConsentDialog.privacyPolicyUrl(appContext), endsWith('/privacy_en.html'));
     });
 
     testWidgets('tapping Zustimmen saves true and closes dialog', (tester) async {

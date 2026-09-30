@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/app_localizations.dart';
 import '../services/hive_service.dart';
 
 class PrivacyConsentDialog extends StatelessWidget {
-  static const String privacyPolicyUrl =
-      'https://emredevelopstudio.github.io/FoodSnap-AI/privacy.html';
+  /// Deutsche bzw. englische Fassung je nach App-Sprache (privacy_policy_url in l10n).
+  static String privacyPolicyUrl(BuildContext context) =>
+      context.l10n.t('privacy_policy_url');
 
   const PrivacyConsentDialog({super.key});
 
   /// Öffnet die offizielle Datenschutzerklärung im externen Browser
   static Future<void> openPrivacyPolicy(BuildContext context) async {
-    final uri = Uri.parse(privacyPolicyUrl);
+    final l10n = context.l10n;
+    final uri = Uri.parse(privacyPolicyUrl(context));
     try {
       final launched = await launchUrl(
         uri,
@@ -18,8 +21,8 @@ class PrivacyConsentDialog extends StatelessWidget {
       );
       if (!launched && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Konnte Datenschutzerklärung nicht öffnen.'),
+          SnackBar(
+            content: Text(l10n.t('privacy_open_failed')),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -28,7 +31,7 @@ class PrivacyConsentDialog extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Öffnen des Links: $e'),
+            content: Text('${l10n.t('privacy_open_error')}: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -97,7 +100,7 @@ class PrivacyConsentDialog extends StatelessWidget {
 
               // Titel
               Text(
-                'Datenschutz & KI-Nutzung',
+                context.l10n.t('privacy_title'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 19,
@@ -110,7 +113,7 @@ class PrivacyConsentDialog extends StatelessWidget {
 
               // Beschreibung
               Text(
-                'Um deine Mahlzeiten automatisch zu erkennen und Nährwerte präzise zu ermitteln, nutzt FoodSnap AI die Kamera und Galerie deines Geräts.',
+                context.l10n.t('privacy_intro'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13.5,
@@ -142,7 +145,7 @@ class PrivacyConsentDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Zur Erkennung wird dein Foto verschlüsselt an Google (Gemini API) übertragen und dort analysiert. Deine Mahlzeiten und Fotos werden nur auf deinem Gerät gespeichert und nicht verkauft.',
+                        context.l10n.t('privacy_gemini_notice'),
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.35,
@@ -166,9 +169,9 @@ class PrivacyConsentDialog extends StatelessWidget {
                   size: 15,
                   color: royalBlue,
                 ),
-                label: const Text(
-                  'Datenschutzerklärung lesen',
-                  style: TextStyle(
+                label: Text(
+                  context.l10n.t('privacy_read_policy'),
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: royalBlue,
@@ -187,17 +190,17 @@ class PrivacyConsentDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
+                        final declinedText =
+                            context.l10n.t('privacy_declined_snack');
                         await HiveService.setPrivacyAccepted(false);
                         if (!context.mounted) return;
                         Navigator.of(context).pop(false);
 
                         messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'KI-Scan bleibt deaktiviert. Du kannst der Nutzung jederzeit in den Einstellungen zustimmen.',
-                            ),
+                          SnackBar(
+                            content: Text(declinedText),
                             behavior: SnackBarBehavior.floating,
-                            duration: Duration(seconds: 4),
+                            duration: const Duration(seconds: 4),
                           ),
                         );
                       },
@@ -217,7 +220,7 @@ class PrivacyConsentDialog extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'Ablehnen',
+                        context.l10n.t('privacy_decline'),
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
@@ -247,9 +250,9 @@ class PrivacyConsentDialog extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        'Zustimmen',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.t('privacy_accept'),
+                        style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
