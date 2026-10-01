@@ -67,7 +67,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>FoodSnap AI benötigt Zugriff auf die Kamera, um Mahlzeiten und Barcodes zu scannen.</string>
+	<string>FoodSnap AI benötigt Zugriff auf die Kamera, um Mahlzeiten zu fotografieren und zu analysieren.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FoodSnap AI benötigt Zugriff auf deine Fotos, um ein Mahlzeiten-Foto auszuwählen.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

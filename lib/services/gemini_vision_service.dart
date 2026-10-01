@@ -206,17 +206,6 @@ class GeminiVisionService {
     return (text == null || text.trim().isEmpty) ? null : text;
   }
 
-  static Map<String, dynamic> _textRequest(String prompt) => {
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt}
-            ]
-          }
-        ],
-        'generationConfig': {'response_mime_type': 'application/json'},
-      };
-
   // ---------------------------------------------------------------------------
   // Öffentliche API
   // ---------------------------------------------------------------------------
@@ -271,67 +260,6 @@ class GeminiVisionService {
     } catch (e, st) {
       AppLog.e(_tag, 'Bildkompression fehlgeschlagen, sende Original', e, st);
       return bytes;
-    }
-  }
-
-  /// Schätzt Nährwerte pro 100 g/ml anhand eines Produktnamens.
-  Future<Map<String, double>?> estimateProductNutrition(
-      String productName) async {
-    final cleanName = productName.trim();
-    if (cleanName.isEmpty || !isConfigured) return null;
-
-    try {
-      final text = await _generate(
-        _textRequest(
-            'Ermittle durchschnittliche Nährwerte pro 100g/ml für folgendes Lebensmittel: "$cleanName". '
-            'Gib ausschließlich ein valides JSON zurück mit: {"calories": number, "protein": number, "carbs": number, "fat": number}.'),
-        const Duration(seconds: 8),
-      );
-      if (text == null) return null;
-      final decoded = _decodeJsonObject(text);
-      return {
-        'calories': parseNutritionValue(decoded['calories']) ?? 0.0,
-        'protein': parseNutritionValue(decoded['protein']) ?? 0.0,
-        'carbs': parseNutritionValue(decoded['carbs']) ?? 0.0,
-        'fat': parseNutritionValue(decoded['fat']) ?? 0.0,
-      };
-    } catch (e, st) {
-      AppLog.e(_tag, 'Nährwert-Schätzung fehlgeschlagen', e, st);
-      return null;
-    }
-  }
-
-  /// Schätzt Produktname und Nährwerte pro 100 g/ml anhand eines Barcodes.
-  Future<Map<String, dynamic>?> estimateProductByBarcode(String barcode) async {
-    final cleanCode = barcode.trim();
-    if (cleanCode.isEmpty || !isConfigured) return null;
-
-    try {
-      final text = await _generate(
-        _textRequest(
-            'Ermittle das Produkt und durchschnittliche Nährwerte pro 100g/ml für folgenden Barcode (EAN/GTIN): "$cleanCode". '
-            'Gib ausschließlich ein valides JSON zurück mit: {"name": string, "calories": number, "protein": number, "carbs": number, "fat": number}. '
-            'Falls der Barcode unbekannt ist, gib {"name": "Unbekannt", "calories": 0, "protein": 0, "carbs": 0, "fat": 0} zurück.'),
-        const Duration(seconds: 8),
-      );
-      if (text == null) return null;
-      final decoded = _decodeJsonObject(text);
-      final name = decoded['name']?.toString();
-      if (name == null || name == 'Unbekannt') return null;
-
-      final result = <String, dynamic>{
-        'name': name,
-        'calories': parseNutritionValue(decoded['calories']) ?? 0.0,
-        'protein': parseNutritionValue(decoded['protein']) ?? 0.0,
-        'carbs': parseNutritionValue(decoded['carbs']) ?? 0.0,
-        'fat': parseNutritionValue(decoded['fat']) ?? 0.0,
-      };
-      final hasValues =
-          result.values.whereType<double>().any((value) => value > 0);
-      return hasValues ? result : null;
-    } catch (e, st) {
-      AppLog.e(_tag, 'Barcode-Schätzung fehlgeschlagen', e, st);
-      return null;
     }
   }
 
