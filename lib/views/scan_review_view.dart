@@ -331,7 +331,8 @@ class _ScanReviewViewState extends ConsumerState<ScanReviewView> {
 
   Widget _buildImageSection() {
     final path = widget.imagePath;
-    final fileExists = path != null && path.isNotEmpty && File(path).existsSync();
+    // Kein existsSync() im build(): fehlende Datei fängt der errorBuilder ab.
+    final fileExists = path != null && path.isNotEmpty;
 
     return Card(
       clipBehavior: Clip.antiAlias,

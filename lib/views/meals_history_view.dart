@@ -794,7 +794,8 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
 
   Widget _buildThumbnail(MealEntry meal) {
     final imagePath = meal.localImagePath ?? meal.imagePath;
-    if (imagePath != null && imagePath.isNotEmpty && File(imagePath).existsSync()) {
+    // Kein existsSync() im build(): fehlende Datei fängt der errorBuilder ab.
+    if (imagePath != null && imagePath.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image(

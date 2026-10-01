@@ -168,18 +168,27 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     );
   }
 
+  /// Bereits besuchte Tabs bleiben im [IndexedStack] erhalten (Scroll-Position,
+  /// Eingaben). Unbesuchte Tabs werden erst beim ersten Öffnen gebaut – so lädt
+  /// z. B. die Rechner-Anzeige nicht unsichtbar im Hintergrund (AdMob-Richtlinien).
+  final Set<int> _visitedTabs = {};
+
+  static const _tabs = <Widget>[
+    DashboardView(),
+    MealsHistoryView(),
+    FastingView(),
+    CalculatorView(),
+  ];
+
   Widget _buildBody(int currentIndex) {
-    switch (currentIndex) {
-      case 0:
-        return const DashboardView();
-      case 1:
-        return const MealsHistoryView();
-      case 2:
-        return const FastingView();
-      case 3:
-        return const CalculatorView();
-      default:
-        return const DashboardView();
-    }
+    final index = currentIndex.clamp(0, _tabs.length - 1);
+    _visitedTabs.add(index);
+    return IndexedStack(
+      index: index,
+      children: [
+        for (var i = 0; i < _tabs.length; i++)
+          _visitedTabs.contains(i) ? _tabs[i] : const SizedBox.shrink(),
+      ],
+    );
   }
 }

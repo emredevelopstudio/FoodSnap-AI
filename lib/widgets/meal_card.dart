@@ -321,7 +321,8 @@ class MealCard extends StatelessWidget {
 
   Widget _buildThumbnail() {
     final imagePath = meal.imagePath ?? meal.localImagePath;
-    if (imagePath != null && imagePath.isNotEmpty && File(imagePath).existsSync()) {
+    // Kein existsSync() im build(): fehlende Datei fängt der errorBuilder ab.
+    if (imagePath != null && imagePath.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image(
