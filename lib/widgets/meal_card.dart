@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../models/meal_entry.dart';
+import 'meal_photo_actions.dart';
 
 class MealCard extends StatelessWidget {
   final MealEntry meal;
@@ -90,7 +91,10 @@ class MealCard extends StatelessWidget {
           data: theme.copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            leading: _buildThumbnail(),
+            leading: GestureDetector(
+              onTap: () => MealPhotoActions.show(context, meal),
+              child: _buildThumbnail(),
+            ),
             title: Text(
               meal.name,
               style: TextStyle(

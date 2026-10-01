@@ -8,6 +8,7 @@ import '../providers/goals_provider.dart';
 import '../providers/meal_provider.dart';
 import '../widgets/app_native_ad_card.dart';
 import '../widgets/dispose_on_unmount.dart';
+import '../widgets/meal_photo_actions.dart';
 import '../l10n/app_localizations.dart';
 
 class MealsHistoryView extends ConsumerStatefulWidget {
@@ -621,7 +622,10 @@ class _MealsHistoryViewState extends ConsumerState<MealsHistoryView> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildThumbnail(meal),
+                  GestureDetector(
+                    onTap: () => MealPhotoActions.show(context, meal),
+                    child: _buildThumbnail(meal),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
