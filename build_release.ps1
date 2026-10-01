@@ -8,7 +8,12 @@ param(
 )
 
 if ($ProxyUrl) {
-    flutter build appbundle --release --dart-define=GEMINI_PROXY_URL=$ProxyUrl
+    # Obfuscation + ausgelagerte Debug-Symbole: ~0,7 MB kleinerer Download.
+    # Symbole pro Version AUFBEWAHREN - nur damit lassen sich Absturzberichte lesen:
+    #   flutter symbolize -i <stacktrace.txt> -d release_symbols/<version>/app.android-arm64.symbols
+    $version = (Select-String -Path "$PSScriptRoot\pubspec.yaml" -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+    flutter build appbundle --release --dart-define=GEMINI_PROXY_URL=$ProxyUrl --obfuscate --split-debug-info="release_symbols/$version"
+    Write-Host "Debug-Symbole liegen in release_symbols/$version - sichern, nicht loeschen!"
 }
 elseif ($Local) {
     if (-not (Test-Path "$PSScriptRoot\.env")) {

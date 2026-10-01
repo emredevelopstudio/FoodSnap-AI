@@ -33,9 +33,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/icon/
-    # Kein .env als Asset! Keys nur per --dart-define (siehe lib/core/config/api_keys.dart).
+  # assets/icon/ wird NICHT gebündelt: die Bilder nutzt nur flutter_launcher_icons
+  # beim Generieren der App-Icons (image_path unten), die App selbst lädt sie nie.
+  # Kein .env als Asset! Keys nur per dart-define (siehe lib/core/config/api_keys.dart).
 
 flutter_launcher_icons:
   android: "launcher_icon"

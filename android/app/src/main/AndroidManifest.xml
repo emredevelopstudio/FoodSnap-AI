@@ -14,6 +14,12 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-9627194765500923~3520949707"/>
 
+        <!-- Barcode-Modell (unbundled, siehe gradle.properties) schon bei Installation
+             über Google Play-Dienste laden, nicht erst beim ersten Scan -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

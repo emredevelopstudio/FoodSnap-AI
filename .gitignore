@@ -73,3 +73,10 @@ GoogleService-Info.plist
 # Cloud Functions
 /functions/node_modules/
 /functions/lib/
+
+# Entfernte Offline-KI (01.10.2026 erneut lokal aufgetaucht) – nie wieder bündeln/committen
+/assets/models/
+/android/app/src/main/assets/models/
+
+# Debug-Symbole der Store-Builds (lokal aufbewahren, nicht committen)
+/release_symbols/
