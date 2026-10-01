@@ -73,6 +73,14 @@ android {
     }
 
     buildTypes {
+        // Debug mit DEMSELBEN Schlüssel wie Release signieren: sonst passt beim Wechsel
+        // zwischen `flutter run` und Release-APK die Signatur nicht, Flutter deinstalliert
+        // die App automatisch – und alle Hive-Daten (Mahlzeiten etc.) sind weg.
+        debug {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
